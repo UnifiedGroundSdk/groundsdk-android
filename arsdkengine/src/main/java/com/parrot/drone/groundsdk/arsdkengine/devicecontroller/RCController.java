@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.ArsdkEngine;
 import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxRcSession;
 import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxRecorder;
@@ -43,12 +40,16 @@ import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
 import com.parrot.drone.groundsdk.device.DeviceModel;
 import com.parrot.drone.groundsdk.device.RemoteControl;
 import com.parrot.drone.groundsdk.facility.firmware.FirmwareVersion;
+import com.parrot.drone.groundsdk.internal.device.DeviceModels;
 import com.parrot.drone.groundsdk.internal.device.RemoteControlCore;
 import com.parrot.drone.groundsdk.internal.utility.RemoteControlStore;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 import com.parrot.drone.sdkcore.arsdk.blackbox.ArsdkBlackBoxRequest;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import com.parrot.drone.sdkcore.arsdk.device.ArsdkRequest;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Base class for a RC (Remote Control) controller.
@@ -63,6 +64,9 @@ public abstract class RCController extends ProxyDeviceController<RemoteControlCo
     @Nullable
     private BlackBoxListener mBlackBoxListener;
 
+    @NonNull
+    private final RemoteControl.Model model;
+
     /**
      * Constructor.
      *
@@ -74,6 +78,7 @@ public abstract class RCController extends ProxyDeviceController<RemoteControlCo
     RCController(@NonNull ArsdkEngine engine, @NonNull String uid, @NonNull RemoteControl.Model model,
                  @NonNull String name) {
         super(engine, delegate -> new RemoteControlCore(uid, model, name, delegate));
+        this.model = model;
         mDroneManagerFeature = new DroneManagerFeature(mArsdkProxy);
     }
 
@@ -97,7 +102,10 @@ public abstract class RCController extends ProxyDeviceController<RemoteControlCo
             ArsdkFeatureSkyctrl.CommonState.decode(command, mCommonStateCallback);
         } else if (featureId == ArsdkFeatureSkyctrl.CommonEventState.UID) {
             ArsdkFeatureSkyctrl.CommonEventState.decode(command, mCommonEventStateCallback);
+        } else if (featureId == ArsdkFeatureSkyctrl.DeviceState.UID) {
+            ArsdkFeatureSkyctrl.DeviceState.decode(command, mDeviceStateCallback);
         }
+
         mDroneManagerFeature.onCommandReceived(command);
         super.onCommandReceived(command);
     }
@@ -155,7 +163,12 @@ public abstract class RCController extends ProxyDeviceController<RemoteControlCo
 
     @Override
     public void forgetRemoteDevice(@NonNull String deviceUid) {
-        mDroneManagerFeature.forgetDrone(deviceUid);
+        if (model == RemoteControl.Model.SKY_CONTROLLER) {
+            final String[] ids = deviceUid.split("::");
+            sendCommand(ArsdkFeatureSkyctrl.Wifi.encodeForgetWifi(ids[1].trim().equals("") ? ids[0] : ids[1]));
+        } else {
+            mDroneManagerFeature.forgetDrone(deviceUid);
+        }
     }
 
     @NonNull
@@ -170,46 +183,87 @@ public abstract class RCController extends ProxyDeviceController<RemoteControlCo
         return ArsdkFeatureSkyctrl.Common.encodeAllStates();
     }
 
-    /** Called back when a command of the feature ArsdkFeatureSkyctrl.SettingsState is decoded. */
-    private final ArsdkFeatureSkyctrl.SettingsState.Callback mSettingsStateCallback =
-            new ArsdkFeatureSkyctrl.SettingsState.Callback() {
+    /**
+     * Called back when a command of the feature ArsdkFeatureSkyctrl.SettingsState is decoded.
+     */
+    private final ArsdkFeatureSkyctrl.SettingsState.Callback mSettingsStateCallback = new ArsdkFeatureSkyctrl.SettingsState.Callback() {
 
-                @Override
-                public void onAllSettingsChanged() {
-                    handleAllSettingsReceived();
-                }
+        @Override
+        public void onAllSettingsChanged() {
+            handleAllSettingsReceived();
+        }
 
-                @Override
-                public void onProductVersionChanged(String software, String hardware) {
-                    FirmwareVersion version = FirmwareVersion.parse(software);
-                    if (version != null) {
-                        getDevice().updateFirmwareVersion(version);
-                        getDeviceDict().put(PersistentStore.KEY_DEVICE_FIRMWARE_VERSION, software).commit();
+        @Override
+        public void onProductVersionChanged(String software, String hardware) {
+            FirmwareVersion version = FirmwareVersion.parse(software);
+            if (version != null) {
+                getDevice().updateFirmwareVersion(version);
+                getDeviceDict().put(PersistentStore.KEY_DEVICE_FIRMWARE_VERSION, software).commit();
+            }
+        }
+
+
+    };
+
+    /**
+     * Called back when a command of the feature ArsdkFeatureSkyctrl.CommonState is decoded.
+     */
+    private final ArsdkFeatureSkyctrl.CommonState.Callback mCommonStateCallback = new ArsdkFeatureSkyctrl.CommonState.Callback() {
+
+        @Override
+        public void onAllStatesChanged() {
+            handleAllStatesReceived();
+        }
+    };
+
+    /**
+     * Implementation callback of ArsdkFeatureSkyctrl.CommonEventState.
+     */
+    private final ArsdkFeatureSkyctrl.CommonEventState.Callback mCommonEventStateCallback = new ArsdkFeatureSkyctrl.CommonEventState.Callback() {
+
+        @Override
+        public void onShutdown(@Nullable ArsdkFeatureSkyctrl.CommoneventstateShutdownReason reason) {
+            if (reason == ArsdkFeatureSkyctrl.CommoneventstateShutdownReason.POWEROFF_BUTTON) {
+                handleDevicePowerOff();
+            }
+        }
+    };
+
+    /**
+     * Implementation callback of ArsdkFeatureSkyctrl.DeviceState.
+     */
+    private final ArsdkFeatureSkyctrl.DeviceState.Callback mDeviceStateCallback = new ArsdkFeatureSkyctrl.DeviceState.Callback() {
+
+        @Override
+        public void onConnexionChanged(@Nullable ArsdkFeatureSkyctrl.DevicestateConnexionchangedStatus status, String name, @DeviceModel.Id int modelId) {
+            if (status == null) return;
+
+            final String serial = "SC:" + name + ":" + modelId;
+
+            switch (status) {
+                case NOTCONNECTED:
+                    mArsdkProxy.onRemoteDeviceDisconnecting(serial);
+                    break;
+                case CONNECTING: {
+                    DeviceModel model = DeviceModels.model(modelId);
+                    if (model != null) {
+                        mArsdkProxy.onRemoteDeviceConnecting(serial, model, name);
                     }
+                    break;
                 }
-            };
-
-    /** Called back when a command of the feature ArsdkFeatureSkyctrl.CommonState is decoded. */
-    private final ArsdkFeatureSkyctrl.CommonState.Callback mCommonStateCallback =
-            new ArsdkFeatureSkyctrl.CommonState.Callback() {
-
-                @Override
-                public void onAllStatesChanged() {
-                    handleAllStatesReceived();
-                }
-            };
-
-    /** Implementation callback of ArsdkFeatureSkyctrl.CommonEventState. */
-    private final ArsdkFeatureSkyctrl.CommonEventState.Callback mCommonEventStateCallback =
-            new ArsdkFeatureSkyctrl.CommonEventState.Callback() {
-
-                @Override
-                public void onShutdown(@Nullable ArsdkFeatureSkyctrl.CommoneventstateShutdownReason reason) {
-                    if (reason == ArsdkFeatureSkyctrl.CommoneventstateShutdownReason.POWEROFF_BUTTON) {
-                        handleDevicePowerOff();
+                case CONNECTED: {
+                    DeviceModel model = DeviceModels.model(modelId);
+                    if (model != null) {
+                        mArsdkProxy.onRemoteDeviceConnected(serial, model, name);
                     }
+                    break;
                 }
-            };
+                case DISCONNECTING:
+                    mArsdkProxy.onRemoteDeviceDisconnecting(serial);
+                    break;
+            }
+        }
+    };
 
     /**
      * Subscribes to and forwards black box info to the current recording session.

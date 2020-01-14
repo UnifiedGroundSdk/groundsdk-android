@@ -1,12 +1,16 @@
 apply plugin: 'com.android.library'
 
 android {
-    defaultConfig.testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+//    defaultConfig.testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
     sourceSets {
         main.java.srcDirs += "${project.buildDir}/generated/arsdk/gen"
-        androidTest.java.srcDirs += '../unittest-tools/java'
+//        androidTest.java.srcDirs += '../unittest-tools/java'
     }
+
+//    defaultConfig {
+//        useLibrary 'org.apache.http.legacy'
+//    }
 }
 
 dependencies {
@@ -19,16 +23,19 @@ dependencies {
     implementation retrofitScalarsConverter
     implementation retrofitLoggingInterceptor
 
+    //noinspection GradleDependency
+//    implementation 'commons-net:commons-net:3.6'
+
     implementation androidXAnnotations
 
-    androidTestImplementation project(':sdkcore-testing')
-    androidTestImplementation androidXTestCore
-    androidTestImplementation(androidXTestRunner) {
-        // android test runner comes with its own hamcrest-core library, but an older version that
-        // what we wish to use, so exclude it to avoid conflict with our own
-        exclude module: 'hamcrest-core'
-    }
-
-    androidTestImplementation hamcrest
-    androidTestImplementation mockito
+//    androidTestImplementation project(':sdkcore-testing')
+//    androidTestImplementation androidXTestCore
+//    androidTestImplementation(androidXTestRunner) {
+//        // android test runner comes with its own hamcrest-core library, but an older version that
+//        // what we wish to use, so exclude it to avoid conflict with our own
+//        exclude module: 'hamcrest-core'
+//    }
+//
+//    androidTestImplementation hamcrest
+//    androidTestImplementation mockito
 }

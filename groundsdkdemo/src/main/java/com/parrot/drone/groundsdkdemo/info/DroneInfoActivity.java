@@ -37,13 +37,6 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.DialogFragment;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.parrot.drone.groundsdk.device.DeviceConnector;
 import com.parrot.drone.groundsdk.device.DeviceState;
 import com.parrot.drone.groundsdk.device.Drone;
@@ -59,10 +52,19 @@ import com.parrot.drone.groundsdkdemo.R;
 import com.parrot.drone.groundsdkdemo.animation.Animations;
 import com.parrot.drone.groundsdkdemo.animation.PickAnimationDialog;
 import com.parrot.drone.groundsdkdemo.animation.PickFlipDirectionDialog;
-import com.parrot.drone.groundsdkdemo.hud.CopterHudActivity;
+import com.parrot.drone.groundsdkdemo.hud.DroneHudActivity;
 import com.parrot.drone.groundsdkdemo.hud.HmdActivity;
+import com.parrot.drone.sdkcore.arsdk.ArsdkCore;
+import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import java.util.EnumSet;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
+import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import static com.parrot.drone.groundsdkdemo.Extras.EXTRA_DEVICE_UID;
 
@@ -109,9 +111,13 @@ public class DroneInfoActivity extends GroundSdkActivityBase
         Content flyingIndicatorsContent = null;
 
         switch (mDrone.getModel()) {
+            case BEBOP_V1:
+            case BEBOP_V2:
+            case DISCO:
+            case MAMBO:
             case ANAFI_4K:
             case ANAFI_THERMAL:
-                mHudIntent = new Intent(this, CopterHudActivity.class);
+                mHudIntent = new Intent(this, DroneHudActivity.class);
                 flyingIndicatorsContent = new FlyingIndicatorsContent(mDrone);
                 break;
         }
@@ -151,6 +157,7 @@ public class DroneInfoActivity extends GroundSdkActivityBase
             DeviceState state = mDrone.getState();
             switch (state.getConnectionState()) {
                 case DISCONNECTED:
+                    ArsdkCore.setCommandLogLevel(ArsdkCommand.LOG_LEVEL_ALL);
                     if (state.getConnectionStateCause() == DeviceState.ConnectionStateCause.BAD_PASSWORD) {
                         DialogFragment passwordRequest = new PasswordDialogFragment();
                         passwordRequest.show(getSupportFragmentManager(), null);
@@ -195,7 +202,7 @@ public class DroneInfoActivity extends GroundSdkActivityBase
                 new CameraExposureContent(mDrone),
                 new PhotoProgressContent(mDrone),
                 new HeaderContent(getString(R.string.header_piloting_itf)),
-                new ManualCopterContent(mDrone),
+                new ManualFlightContent(mDrone),
                 new ReturnHomeContent(mDrone),
                 new FlightPlanContent(mDrone),
                 new GuidedContent(mDrone),

@@ -35,7 +35,7 @@ package com.parrot.drone.groundsdkdemo.settings;
 import android.os.Bundle;
 
 import com.parrot.drone.groundsdk.device.Drone;
-import com.parrot.drone.groundsdk.device.pilotingitf.ManualCopterPilotingItf;
+import com.parrot.drone.groundsdk.device.pilotingitf.ManualFlightPilotingItf;
 import com.parrot.drone.groundsdkdemo.GroundSdkActivityBase;
 import com.parrot.drone.groundsdkdemo.R;
 
@@ -76,7 +76,7 @@ public class ManualCopterSettingsActivity extends GroundSdkActivityBase {
         mBankedTurnModeView = findViewById(R.id.banked_turn_mode);
         mThrownTakeOffSettingView = findViewById(R.id.thrown_take_off_setting);
 
-        drone.getPilotingItf(ManualCopterPilotingItf.class, pilotingItf -> {
+        drone.getPilotingItf(ManualFlightPilotingItf.class, pilotingItf -> {
             assert pilotingItf != null;
             updateSetting(mMaxPitchRollView, pilotingItf.getMaxPitchRoll());
             updateSetting(mMaxPitchRollVelocityView, pilotingItf.getMaxPitchRollVelocity());

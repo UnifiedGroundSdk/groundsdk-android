@@ -127,6 +127,12 @@
          - the environment is forced to outdoor, and it cannot be changed from the API. -->
     <bool name="gsdk_auto_select_wifi_country">true</bool>
 
+    <!-- tells whether the geocoder engine should be loaded or not -->
+    <bool name="gsdk_geocoder_enabled">false</bool>
+
+    <!-- Tells if the Parrot Device Activation Collection engine should be enabled -->
+    <bool name="gsdk_activation_engine_enabled">false</bool>
+
     <!-- Default country code that will be returned by the reverse geocoder.
          Empty to not return a default country code. -->
     <string name="gsdk_reverse_geocoder_default_country_code"/>

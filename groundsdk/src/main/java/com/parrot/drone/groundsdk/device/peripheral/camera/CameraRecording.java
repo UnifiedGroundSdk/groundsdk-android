@@ -32,12 +32,12 @@
 
 package com.parrot.drone.groundsdk.device.peripheral.camera;
 
+import java.util.Date;
+import java.util.EnumSet;
+
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import java.util.Date;
-import java.util.EnumSet;
 
 /**
  * Scoping class for camera recording related types and settings.
@@ -85,7 +85,10 @@ public final class CameraRecording {
         RES_720P_4_3,
 
         /** 856x480 pixels. */
-        RES_480P
+        RES_480P,
+
+        /** 16/9 VGA streaming (640 x 360). */
+        RES_VGA,
     }
 
     /** Camera recording framerate. */

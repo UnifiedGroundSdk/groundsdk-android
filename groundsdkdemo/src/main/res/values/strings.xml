@@ -32,7 +32,7 @@
   ~
   -->
 
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resource xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">GroundSdk Demo</string>
     <string name="title_activity_manual_copter_settings">Manual Copter Settings</string>
     <string name="title_activity_magnetometer_calibration">Magneto Calibration</string>
@@ -410,7 +410,7 @@
     <string name="axis_event_format">%1$s (%2$d)</string>
     <string name="time_s_format">%1$.1f s</string>
     <string name="motor_in_error_format">&lt;b>%1$s&lt;/b></string>
-    <string name="media_count_format">%1$d (resources: %2$d)</string>
+    <string name="media_count_format">%1$d (resource: %2$d)</string>
     <string name="media_type_format">%1$s [%2$s]</string>
     <string name="media_photo_mode_format">%1$s (%2$s)</string>
     <string name="media_photo_panorama_type_format">%1$s: %2$s</string>
@@ -606,5 +606,5 @@
     <string name="user_account_id">Account id</string>
     <string name="allow_accountless_data">Allow accountless data</string>
     <string name="allow_anonymous_data">Allow anonymous data</string>
-</resources>
+</resource>
 

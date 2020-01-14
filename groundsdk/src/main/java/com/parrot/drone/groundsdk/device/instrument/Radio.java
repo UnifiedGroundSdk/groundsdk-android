@@ -32,10 +32,10 @@
 
 package com.parrot.drone.groundsdk.device.instrument;
 
-import androidx.annotation.IntRange;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.Drone;
+
+import androidx.annotation.IntRange;
 
 /**
  * Instrument that informs about the radio.

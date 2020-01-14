@@ -35,9 +35,6 @@ package com.parrot.drone.groundsdk.internal.engine;
 import android.content.Context;
 import android.location.Geocoder;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.VisibleForTesting;
-
 import com.parrot.drone.groundsdk.facility.Facility;
 import com.parrot.drone.groundsdk.internal.GroundSdkConfig;
 import com.parrot.drone.groundsdk.internal.component.ComponentStore;
@@ -56,6 +53,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 
 /**
  * Central control of all engines' lifecycle.
@@ -104,19 +104,19 @@ public class EnginesController {
      * @return a set of all created engines
      */
     private static Set<EngineBase> createEngines(@NonNull EngineBase.Controller controller) {
+        GroundSdkConfig config = GroundSdkConfig.get(controller.mContext);
+
         HashSet<EngineBase> engines = new LinkedHashSet<>();
         // create internal engines
         engines.add(new SystemEngine(controller));
         engines.add(new UserLocationEngine(controller));
         engines.add(new AutoConnectionEngine(controller));
-        engines.add(new ActivationEngine(controller));
-        engines.add(new UserAccountEngine(controller));
 
-        GroundSdkConfig config = GroundSdkConfig.get(controller.mContext);
-
-        if (Geocoder.isPresent()) {
-            engines.add(new ReverseGeocoderEngine(controller));
+        if (config.shouldEnableActivationEngine()) {
+            engines.add(new ActivationEngine(controller));
         }
+
+        engines.add(new UserAccountEngine(controller));
 
         if (config.isFirmwareEnabled()) {
             engines.add(new FirmwareEngine(controller));
@@ -127,6 +127,9 @@ public class EnginesController {
         }
 
         if (config.hasApplicationKey()) {
+            if (config.shouldEnableGeocoder() && Geocoder.isPresent()) {
+                engines.add(new ReverseGeocoderEngine(controller));
+            }
             if (config.isBlackBoxEnabled()) {
                 engines.add(new BlackBoxEngine(controller));
             }

@@ -37,15 +37,15 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Parcelable;
 
-import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.device.peripheral.MediaStore;
 
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * A media item in a {@link MediaStore}.
@@ -151,7 +151,10 @@ public interface MediaItem extends Parcelable {
             DNG,
 
             /** MP4 video. */
-            MP4
+            MP4,
+
+            /** UNKNOWN */
+            UNKNOWN
         }
 
         /**

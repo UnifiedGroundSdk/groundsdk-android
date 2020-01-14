@@ -32,7 +32,7 @@
   ~
   -->
 
-<resources xmlns:tools="http://schemas.android.com/tools" tools:discard="preview_*">
+<resource xmlns:tools="http://schemas.android.com/tools" tools:discard="preview_*">
 
     <string-array name="preview_mapping_types">
         <item>BUTTONS_MAPPING</item>
@@ -56,4 +56,4 @@
     , rotation_speed: 66.66 °/s, mode: ONCE_THEN_MIRRORED] (66% ANIMATING)
     </string>
 
-</resources>
+</resource>

@@ -32,12 +32,14 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.RCController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SystemInfoControllerBase;
+import com.parrot.drone.groundsdk.device.peripheral.SystemInfo;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** SystemInfo peripheral controller for SkyController family remote controls. */
 public class SkyControllerSystemInfo extends SystemInfoControllerBase {
@@ -69,28 +71,46 @@ public class SkyControllerSystemInfo extends SystemInfoControllerBase {
         return sendCommand(ArsdkFeatureSkyctrl.Settings.encodeReset());
     }
 
-    /** Callbacks called when a command of the feature ArsdkFeatureSkyctrl.SettingsState is decoded. */
-    private final ArsdkFeatureSkyctrl.SettingsState.Callback mSettingsStateCallback =
-            new ArsdkFeatureSkyctrl.SettingsState.Callback() {
+    @Override
+    protected void sendReboot() {
+        // not implemented
+    }
 
-                @SuppressWarnings("deprecation")
-                @Override
-                public void onResetChanged() {
-                    onSettingsReset();
-                    mSystemInfo.notifyUpdated();
-                }
+    /**
+     * Callbacks called when a command of the feature ArsdkFeatureSkyctrl.SettingsState is decoded.
+     */
+    private final ArsdkFeatureSkyctrl.SettingsState.Callback mSettingsStateCallback = new ArsdkFeatureSkyctrl.SettingsState.Callback() {
+        @Override
+        public void onProductVariantChanged(@Nullable ArsdkFeatureSkyctrl.SettingsstateProductvariantchangedVariant variant) {
+            onSkyControllerVariant(variant == ArsdkFeatureSkyctrl.SettingsstateProductvariantchangedVariant.BEBOP ? SystemInfo.SkyControllerVariant.GENERATION_ONE : SystemInfo.SkyControllerVariant.GENERATION_TWO);
+            mSystemInfo.notifyUpdated();
+        }
 
-                @Override
-                public void onProductSerialChanged(String serialnumber) {
-                    onSerial(serialnumber);
-                    mSystemInfo.notifyUpdated();
-                }
+        @Override
+        public void onCPUID(String id) {
+            onCpuId(id);
+            mSystemInfo.notifyUpdated();
 
-                @Override
-                public void onProductVersionChanged(String software, String hardware) {
-                    onHardwareVersion(hardware);
-                    onFirmwareVersion(software);
-                    mSystemInfo.notifyUpdated();
-                }
-            };
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public void onResetChanged() {
+            onSettingsReset();
+            mSystemInfo.notifyUpdated();
+        }
+
+        @Override
+        public void onProductSerialChanged(String serialnumber) {
+            onSerial(serialnumber);
+            mSystemInfo.notifyUpdated();
+        }
+
+        @Override
+        public void onProductVersionChanged(String software, String hardware) {
+            onHardwareVersion(hardware);
+            onFirmwareVersion(software);
+            mSystemInfo.notifyUpdated();
+        }
+    };
 }

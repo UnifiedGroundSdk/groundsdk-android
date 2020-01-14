@@ -32,15 +32,15 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.ArsdkProxy;
 import com.parrot.drone.groundsdk.device.DeviceModel;
 import com.parrot.drone.groundsdk.internal.device.DeviceModels;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureDroneManager;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureGeneric;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Implementation of DroneManager feature commands and callbacks.

@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.flightdata;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DeviceController;
 import com.parrot.drone.groundsdk.arsdkengine.http.HttpPudClient;
 import com.parrot.drone.groundsdk.arsdkengine.http.HttpPudInfo;
@@ -48,15 +45,18 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 /** FlightDataDownloader peripheral controller for Anafi family drones. */
 public final class AnafiFlightDataDownloader extends PeripheralController<DeviceController<?>> {
 
     /**
-     * Creates a new {@code AnafiFlightDataDownloader} instance.
+     * Creates a new {@code BebopFlightDataDownloader} instance.
      *
      * @param controller device controller that owns this peripheral controller
      *
-     * @return a new {@code AnafiFlightDataDownloader} instance if a {@link FlightDataStorage flight data storage
+     * @return a new {@code BebopFlightDataDownloader} instance if a {@link FlightDataStorage flight data storage
      *         utility} exists, otherwise {@code null}
      */
     @Nullable

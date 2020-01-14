@@ -34,12 +34,10 @@ package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi;
 
 import android.util.SparseArray;
 
-import androidx.annotation.IntDef;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.DronePeripheralController;
+import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
+import com.parrot.drone.groundsdk.arsdkengine.persistence.StorageEntry;
 import com.parrot.drone.groundsdk.device.peripheral.CopterMotors;
 import com.parrot.drone.groundsdk.device.peripheral.motor.MotorError;
 import com.parrot.drone.groundsdk.internal.device.peripheral.CopterMotorsCore;
@@ -50,6 +48,11 @@ import com.parrot.drone.sdkcore.ulog.ULog;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.EnumSet;
+import java.util.Objects;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG;
 
@@ -59,6 +62,13 @@ public final class AnafiMotors extends DronePeripheralController {
     /** CopterMotors peripheral for which this object is the backend. */
     @NonNull
     private final CopterMotorsCore mCopterMotors;
+    
+    /** Dictionary containing device specific values for this component. */
+    @NonNull
+    private final PersistentStore.Dictionary mDeviceDict;
+    
+    /** Key used to access device specific dictionary for this component's settings. */
+    private static final String SETTINGS_KEY = "motors";
 
     /**
      * Constructor.
@@ -67,7 +77,13 @@ public final class AnafiMotors extends DronePeripheralController {
      */
     public AnafiMotors(@NonNull DroneController droneController) {
         super(droneController);
-        mCopterMotors = new CopterMotorsCore(mComponentStore);
+        mDeviceDict = mDeviceController.getDeviceDict().getDictionary(SETTINGS_KEY);
+        mCopterMotors = new CopterMotorsCore(mComponentStore, mBackend);
+
+        if (!mDeviceDict.isNew()) {
+            loadLastValues();
+            mCopterMotors.publish();
+        }
     }
 
     @Override
@@ -76,8 +92,38 @@ public final class AnafiMotors extends DronePeripheralController {
     }
 
     @Override
+    protected void onDisconnecting() {
+        super.onDisconnecting();
+
+        for (CopterMotors.Motor motor : CopterMotors.Motor.values()) {
+            StorageEntry.ofString("motor_" + motor.ordinal() + "_version").save(mDeviceDict, Objects.requireNonNull(mCopterMotors.motors().get(motor)).getHardwareVersion());
+            StorageEntry.ofString("motor_" + motor.ordinal() + "_type").save(mDeviceDict, Objects.requireNonNull(mCopterMotors.motors().get(motor)).getType());
+            StorageEntry.ofString("motor_" + motor.ordinal() + "_error").save(mDeviceDict, Objects.requireNonNull(mCopterMotors.motors().get(motor)).getError().name());
+        }
+    }
+
+    @Override
     protected void onDisconnected() {
+        if (mDeviceDict.isNew()) {
+            mCopterMotors.unpublish();
+        }
+    }
+    
+    @Override
+    protected void onForgetting() {
+        mDeviceDict.clear();
         mCopterMotors.unpublish();
+    }
+    
+    private void loadLastValues() {
+        for (CopterMotors.Motor motor : CopterMotors.Motor.values()) {
+            final String version = StorageEntry.ofString("motor_" + motor.ordinal() + "_version").load(mDeviceDict);
+            final String type = StorageEntry.ofString("motor_" + motor.ordinal() + "_type").load(mDeviceDict);
+            final String error = StorageEntry.ofString("motor_" + motor.ordinal() + "_error").load(mDeviceDict);
+
+            mCopterMotors.updateCurrentError(motor, error == null ? MotorError.NONE : MotorError.valueOf(error));
+            mCopterMotors.updateMotorDetail(motor, type == null ? "Not Available" : type, version == null ? "Not Available" : version, version == null ? "Not Available" : version);
+        }
     }
 
     @Override
@@ -88,31 +134,57 @@ public final class AnafiMotors extends DronePeripheralController {
         }
     }
 
-    /** Callbacks called when a command of the feature ArsdkFeatureArdrone3.SettingsState is decoded. */
-    private final ArsdkFeatureArdrone3.SettingsState.Callback mArdrone3SettingsStateCallbacks =
-            new ArsdkFeatureArdrone3.SettingsState.Callback() {
+    /**
+     * Callbacks called when a command of the feature ArsdkFeatureArdrone3.SettingsState is decoded.
+     */
+    private final ArsdkFeatureArdrone3.SettingsState.Callback mArdrone3SettingsStateCallbacks = new ArsdkFeatureArdrone3.SettingsState.Callback() {
+        @Override
+        public void onProductMotorVersionListChanged(int motorNumber, String type, String software, String hardware) {
+            mCopterMotors.updateMotorDetail(CopterMotors.Motor.values()[motorNumber], type, software, hardware);
+            mCopterMotors.notifyUpdated();
+        }
 
-                @Override
-                public void onMotorErrorStateChanged(
-                        @MotorAdapter.ArsdkMask int motorIds,
-                        @Nullable ArsdkFeatureArdrone3.SettingsstateMotorerrorstatechangedMotorerror motorError) {
-                    MotorError error = ErrorAdapter.from(motorError);
-                    for (CopterMotors.Motor motor : MotorAdapter.from(motorIds)) {
-                        mCopterMotors.updateCurrentError(motor, error);
-                    }
-                    mCopterMotors.notifyUpdated();
+        @Override
+        public void onMotorSoftwareVersionChanged(String info) {
+            if (info != null) {
+                final String[] data = info.split("\\.");
+                final String version = data[0] + "." + data[1];
+                final String type = data[2];
+                final int motors = Integer.valueOf(data[3]);
+
+                for (int x = 0 ; x < motors ; x++) {
+                    mCopterMotors.updateMotorDetail(CopterMotors.Motor.values()[x], type, version, version);
                 }
 
-                @Override
-                public void onMotorErrorLastErrorChanged(
-                        @Nullable ArsdkFeatureArdrone3.SettingsstateMotorerrorlasterrorchangedMotorerror motorError) {
-                    MotorError error = ErrorAdapter.from(motorError);
-                    for (CopterMotors.Motor motor : CopterMotors.Motor.values()) {
-                        mCopterMotors.updateLatestError(motor, error);
-                    }
-                    mCopterMotors.notifyUpdated();
-                }
-            };
+                mCopterMotors.notifyUpdated();
+            }
+        }
+
+        @Override
+        public void onMotorErrorStateChanged(
+                @MotorAdapter.ArsdkMask int motorIds,
+                @Nullable ArsdkFeatureArdrone3.SettingsstateMotorerrorstatechangedMotorerror motorError) {
+            MotorError error = ErrorAdapter.from(motorError);
+            for (CopterMotors.Motor motor : MotorAdapter.from(motorIds)) {
+                mCopterMotors.updateCurrentError(motor, error);
+            }
+
+            mCopterMotors.notifyUpdated();
+        }
+
+        @Override
+        public void onMotorErrorLastErrorChanged(
+                @Nullable ArsdkFeatureArdrone3.SettingsstateMotorerrorlasterrorchangedMotorerror motorError) {
+            MotorError error = ErrorAdapter.from(motorError);
+            for (CopterMotors.Motor motor : CopterMotors.Motor.values()) {
+                mCopterMotors.updateLatestError(motor, error);
+            }
+            mCopterMotors.notifyUpdated();
+        }
+    };
+
+    @SuppressWarnings("FieldCanBeLocal")
+    private final CopterMotorsCore.Backend mBackend = enable -> false;
 
     /**
      * Utility class to adapt arsdk motor ids to {@link CopterMotors.Motor groundsdk motors}.

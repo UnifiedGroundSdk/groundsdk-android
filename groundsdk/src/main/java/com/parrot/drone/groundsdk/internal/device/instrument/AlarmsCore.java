@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.internal.device.instrument;
 
-import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.device.instrument.Alarms;
 import com.parrot.drone.groundsdk.device.instrument.Instrument;
 import com.parrot.drone.groundsdk.internal.component.ComponentDescriptor;
@@ -42,6 +39,9 @@ import com.parrot.drone.groundsdk.internal.component.ComponentStore;
 import com.parrot.drone.groundsdk.internal.component.SingletonComponentCore;
 
 import java.util.EnumMap;
+
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
 
 /** Core class for the Alarms instrument. */
 public final class AlarmsCore extends SingletonComponentCore implements Alarms {
@@ -68,6 +68,24 @@ public final class AlarmsCore extends SingletonComponentCore implements Alarms {
         for (Alarm.Kind kind : Alarm.Kind.values()) {
             mAlarms.put(kind, new AlarmCore(kind, Alarm.Level.NOT_SUPPORTED));
         }
+    }
+
+    /**
+     * Gets all alarms.
+     *
+     * @return an EnumMap of all alarms
+     */
+    @Override
+    @NonNull
+    public EnumMap<Alarm.Kind, Alarm> getAlarms() {
+
+        final EnumMap<Alarm.Kind, Alarm> alarms = new EnumMap<>(Alarm.Kind.class);
+
+        for (Alarm alarm : mAlarms.values()) {
+            alarms.put(alarm.getKind(), alarm);
+        }
+
+        return alarms;
     }
 
     /**

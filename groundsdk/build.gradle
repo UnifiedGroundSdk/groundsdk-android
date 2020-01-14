@@ -1,15 +1,20 @@
 apply plugin: 'com.android.library'
 
 android {
-    defaultConfig.testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+//    defaultConfig.testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
-    sourceSets.androidTest.java.srcDirs += '../unittest-tools/java'
+//    sourceSets.androidTest.java.srcDirs += '../unittest-tools/java'
 
     resourcePrefix 'gsdk_'
+
+//    defaultConfig {
+//        useLibrary 'org.apache.http.legacy'
+//    }
 }
 
 dependencies {
     implementation project(':sdkcore')
+    implementation project(path: ':libARMavlink')
 
     implementation androidXLocalBroadcastManager
 
@@ -22,14 +27,20 @@ dependencies {
 
     implementation androidXAnnotations
 
-    androidTestImplementation androidXTestCore
-    androidTestImplementation(androidXTestRunner) {
-        // android test runner comes with its own hamcrest-core library, but an older version that
-        // what we wish to use, so exclude it to avoid conflict with our own
-        exclude module: 'hamcrest-core'
-    }
-    androidTestImplementation hamcrest
-    androidTestImplementation mockito
+    implementation 'org.conscrypt:conscrypt-android:2.2.1'
+
+    //noinspection GradleDependency
+//    implementation 'commons-net:commons-net:3.6'
+
+
+//    androidTestImplementation androidXTestCore
+//    androidTestImplementation(androidXTestRunner) {
+//        // android test runner comes with its own hamcrest-core library, but an older version that
+//        // what we wish to use, so exclude it to avoid conflict with our own
+//        exclude module: 'hamcrest-core'
+//    }
+//    androidTestImplementation hamcrest
+//    androidTestImplementation mockito
 }
 
 task javadoc(type: Javadoc) {

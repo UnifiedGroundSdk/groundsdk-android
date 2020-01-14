@@ -40,10 +40,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 
-import androidx.annotation.NonNull;
-
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -58,6 +55,8 @@ import com.parrot.drone.groundsdk.device.pilotingitf.Activable;
 import com.parrot.drone.groundsdk.device.pilotingitf.PointOfInterestPilotingItf;
 import com.parrot.drone.groundsdkdemo.GroundSdkActivityBase;
 import com.parrot.drone.groundsdkdemo.R;
+
+import androidx.annotation.NonNull;
 
 import static com.parrot.drone.groundsdkdemo.Extras.EXTRA_DEVICE_UID;
 
@@ -102,7 +101,7 @@ public class PointOfInterestEditActivity extends GroundSdkActivityBase {
         Button startButton = findViewById(R.id.btn_start);
         Button stopButton = findViewById(R.id.btn_stop);
 
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+//        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         mMapView.onCreate(savedInstanceState);
         mMapView.getMapAsync(googleMap -> {
             mMap = googleMap;

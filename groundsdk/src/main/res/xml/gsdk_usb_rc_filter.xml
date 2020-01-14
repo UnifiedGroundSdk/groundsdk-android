@@ -37,4 +37,10 @@
     <usb-accessory
         manufacturer="Parrot"
         model="Skycontroller 3"/>
+    <usb-accessory
+        manufacturer="Parrot"
+        model="Skycontroller 2P"/>
+    <usb-accessory
+        manufacturer="Parrot"
+        model="Skycontroller 2"/>
 </resources>

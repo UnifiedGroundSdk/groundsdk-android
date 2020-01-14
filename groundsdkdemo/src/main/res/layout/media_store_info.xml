@@ -72,7 +72,7 @@
             <TextView
                 android:id="@+id/picture_count"
                 android:gravity="center_vertical|end"
-                tools:text="412 (resources: 435)"/>
+                tools:text="412 (resource: 435)"/>
         </TableRow>
 
         <TableRow>
@@ -82,7 +82,7 @@
             <TextView
                 android:id="@+id/video_count"
                 android:gravity="center_vertical|end"
-                tools:text="122 (resources: 123)"/>
+                tools:text="122 (resource: 123)"/>
         </TableRow>
     </TableLayout>
 

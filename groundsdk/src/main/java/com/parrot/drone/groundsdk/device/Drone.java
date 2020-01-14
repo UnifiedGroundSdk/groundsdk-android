@@ -32,12 +32,12 @@
 
 package com.parrot.drone.groundsdk.device;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.instrument.Instrument;
 import com.parrot.drone.groundsdk.device.peripheral.Peripheral;
 import com.parrot.drone.groundsdk.device.pilotingitf.PilotingItf;
+
+import androidx.annotation.NonNull;
 
 /**
  * A generic drone. This is the base class to manage a specific drone.
@@ -50,6 +50,21 @@ public abstract class Drone
      */
     @SuppressWarnings("NullableProblems") // name() in enum is virtually @NonNull
     public enum Model implements DeviceModel {
+
+        /** UNKNOWN */
+        UNKNOWN(0x0000),
+
+        /** Bebop 1 drone. */
+        BEBOP_V1(0x0901),
+
+        /** Bebop 2 drone. */
+        BEBOP_V2(0x090c),
+
+        /** Evinrude (Disco) drone */
+        DISCO(0x090e),
+
+        /** Mambo drone */
+        MAMBO(0x090b),
 
         /** Anafi 4k drone. */
         ANAFI_4K(0x0914),

@@ -32,15 +32,15 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.ActivablePilotingItfController;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.PilotingCommand;
 import com.parrot.drone.groundsdk.device.pilotingitf.Activable;
 import com.parrot.drone.sdkcore.ulog.ULog;
 
 import java.io.PrintWriter;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_PITF;
 
@@ -212,6 +212,16 @@ public class PilotingItfActivationController {
     }
 
     /**
+     * Called back when a piloting interface forwards a HoverlLock feature change.
+     *
+     * @param pilotingItf   piloting interface from which the change originates
+     * @param withHoverLock new Hoverlock value
+     */
+    public void onWithHoverLock(@NonNull ActivablePilotingItfController pilotingItf, boolean withHoverLock) {
+        mPilotingCommandEncoder.setWithHoverLock(withHoverLock);
+    }
+
+    /**
      * Called back when a piloting interface forwards a piloting command roll change.
      *
      * @param pilotingItf piloting interface from which the change originates
@@ -255,6 +265,12 @@ public class PilotingItfActivationController {
      */
     public void onGaz(@NonNull ActivablePilotingItfController pilotingItf, int gaz) {
         if (pilotingItf == mCurrentPilotingItf && mPilotingCommandEncoder.setGaz(gaz)) {
+            mDroneController.onPilotingCommandChanged(mPilotingCommandEncoder.getPilotingCommand());
+        }
+    }
+
+    public void onFlag(@NonNull ActivablePilotingItfController pilotingItf, boolean flag) {
+        if (pilotingItf == mCurrentPilotingItf && mPilotingCommandEncoder.setFlag(flag)) {
             mDroneController.onPilotingCommandChanged(mPilotingCommandEncoder.getPilotingCommand());
         }
     }

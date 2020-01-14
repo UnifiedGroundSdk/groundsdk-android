@@ -34,10 +34,6 @@ package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.camera;
 
 import android.util.SparseArray;
 
-import androidx.annotation.FloatRange;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DeviceController;
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.DronePeripheralController;
@@ -68,6 +64,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.function.Consumer;
+
+import androidx.annotation.FloatRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_CAMERA;
 

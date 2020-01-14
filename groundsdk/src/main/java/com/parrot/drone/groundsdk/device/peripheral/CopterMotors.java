@@ -32,13 +32,16 @@
 
 package com.parrot.drone.groundsdk.device.peripheral;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.Drone;
+import com.parrot.drone.groundsdk.device.peripheral.motor.MotorDetail;
 import com.parrot.drone.groundsdk.device.peripheral.motor.MotorError;
+import com.parrot.drone.groundsdk.value.BooleanSetting;
 
+import java.util.EnumMap;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
 
 /**
  * CopterMotors peripheral interface for copter drones.
@@ -88,4 +91,8 @@ public interface CopterMotors extends Peripheral {
      */
     @NonNull
     Set<Motor> getMotorsCurrentlyInError();
+
+    EnumMap<Motor, MotorDetail> motors();
+
+    BooleanSetting cutOutMode();
 }

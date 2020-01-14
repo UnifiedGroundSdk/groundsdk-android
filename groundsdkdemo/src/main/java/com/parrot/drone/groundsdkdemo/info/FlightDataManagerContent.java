@@ -36,14 +36,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.GroundSdk;
 import com.parrot.drone.groundsdk.facility.FlightDataManager;
 import com.parrot.drone.groundsdkdemo.R;
 
 import java.io.File;
+import java.util.Iterator;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
 
 class FlightDataManagerContent extends FacilityContent<FlightDataManager> {
 
@@ -85,7 +86,9 @@ class FlightDataManagerContent extends FacilityContent<FlightDataManager> {
             @Override
             void onClick(View view, @NonNull FlightDataManagerContent content, @NonNull FlightDataManager manager) {
                 Set<File> files = manager.files();
-                for (File file : files) {
+                // prevent concurrent modification exception
+                for (final Iterator iterator = files.iterator() ; iterator.hasNext() ;) {
+                    final File file = (File) iterator.next();
                     manager.delete(file);
                 }
             }

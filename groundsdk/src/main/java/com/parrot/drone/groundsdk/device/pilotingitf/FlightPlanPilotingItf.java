@@ -32,13 +32,15 @@
 
 package com.parrot.drone.groundsdk.device.pilotingitf;
 
-import androidx.annotation.NonNull;
-
+import com.parrot.arsdk.armavlink.MissionItem;
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.value.BooleanSetting;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
 
 /**
  * Flight Plan piloting interface for drones.
@@ -197,6 +199,19 @@ public interface FlightPlanPilotingItf extends PilotingItf, Activable {
      * @return the latest mission item executed index, or {@code -1} if no item has been executed yet
      */
     int getLatestMissionItemExecuted();
+
+    /**
+     * Sets the {@code com.parrot.arsdk.armavlink.ARMavlinkMissionItemList} last uploaded
+     * to the drone as a mavlink file
+     */
+    void setMissionItemList(ArrayList<MissionItem> missionItemList);
+
+    /**
+     * Gets the id of the latest waypoint item executed (not yet reached)
+     *
+     * @return the latest waypoint item executed (not yet reached), or {@code -1} if no item has been executed yet
+     */
+    int getLatestWaypointExecuted();
 
     /**
      * Setting for drone behavior upon disconnection during execution of a Flight Plan.

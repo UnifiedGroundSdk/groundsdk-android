@@ -32,14 +32,14 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.instrument.skycontroller;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.RCController;
 import com.parrot.drone.groundsdk.arsdkengine.instrument.RCInstrumentController;
 import com.parrot.drone.groundsdk.internal.Maths;
 import com.parrot.drone.groundsdk.internal.device.instrument.CompassCore;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
+
+import androidx.annotation.NonNull;
 
 /** Compass instrument controller for SkyController family remote controls. */
 public class SkyControllerCompass extends RCInstrumentController {
@@ -79,6 +79,13 @@ public class SkyControllerCompass extends RCInstrumentController {
     /** Callbacks called when a command of the feature ArsdkFeatureSkyctrl.SkyControllerState is decoded. */
     private final ArsdkFeatureSkyctrl.SkyControllerState.Callback mSkyControllerStateCallback =
             new ArsdkFeatureSkyctrl.SkyControllerState.Callback() {
+
+                @Override
+                public void onGpsPositionChanged(double latitude, double longitude, double altitude, float heading) {
+                    if (heading != 500f) {
+                        mCompass.updateHeading(heading).notifyUpdated();
+                    }
+                }
 
                 @Override
                 public void onAttitudeChanged(float q0, float q1, float q2, float q3) {

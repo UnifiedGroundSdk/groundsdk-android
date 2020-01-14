@@ -36,12 +36,11 @@ import android.content.Context;
 import android.hardware.usb.UsbAccessory;
 import android.os.Build;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxRecorder;
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.AnafiFamilyDroneController;
+import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.BebopFamilyDroneController;
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DeviceController;
+import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.MiniatureFamilyDroneController;
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.SkyControllerFamilyController;
 import com.parrot.drone.groundsdk.arsdkengine.ephemeris.EphemerisStore;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.AppDefaults;
@@ -72,6 +71,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Ground sdk engine implementation for arsdk.
@@ -113,8 +115,8 @@ public class ArsdkEngine extends EngineBase implements RcUsbAccessoryManager {
      */
     public ArsdkEngine(@NonNull Controller controller) {
         super(controller);
-        // TODO: add arsdkengine configuration API. For now enable log on all builds
-        ArsdkCore.setCommandLogLevel(ArsdkCommand.LOG_LEVEL_ACKNOWLEDGED_WITHOUT_FREQUENT);
+        // TODO: add arsdkengine configuration API. For now disable log on all builds (consumer must override post connection)
+        ArsdkCore.setCommandLogLevel(ArsdkCommand.LOG_LEVEL_NONE);
         publishUtility(RcUsbAccessoryManager.class, this);
         mPersistentStore = AppDefaults.importTo(new PersistentStore(getContext()));
 
@@ -333,13 +335,23 @@ public class ArsdkEngine extends EngineBase implements RcUsbAccessoryManager {
         if (model instanceof Drone.Model) {
             Drone.Model droneModel = (Drone.Model) model;
             switch (droneModel) {
+                case BEBOP_V1:
+                case BEBOP_V2:
+                case DISCO:
+                    return new BebopFamilyDroneController(this, uid, droneModel, name);
                 case ANAFI_4K:
                 case ANAFI_THERMAL:
                     return new AnafiFamilyDroneController(this, uid, droneModel, name);
+                case MAMBO:
+                    return new MiniatureFamilyDroneController(this, uid, droneModel, name);
             }
         } else if (model instanceof RemoteControl.Model) {
             RemoteControl.Model rcModel = (RemoteControl.Model) model;
             switch (rcModel) {
+                case SKY_CONTROLLER:
+                case SKY_CONTROLLER_NG:
+                case SKY_CONTROLLER_2:
+                case SKY_CONTROLLER_2P:
                 case SKY_CONTROLLER_3:
                     return new SkyControllerFamilyController(this, uid, rcModel, name);
             }

@@ -54,6 +54,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application tools:ignore="GoogleAppIndexingWarning">
+
+<!--        <uses-library android:name="org.apache.http.legacy" android:required="false" />-->
+
         <activity
             android:name=".internal.RcAccessoryBootstrapActivity"
             android:enabled="@bool/gsdk_rc_accessory_bootstrap_activity_enabled"

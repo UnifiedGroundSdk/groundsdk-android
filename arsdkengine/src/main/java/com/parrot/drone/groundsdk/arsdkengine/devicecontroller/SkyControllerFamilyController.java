@@ -32,8 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.arsdkengine.ArsdkEngine;
 import com.parrot.drone.groundsdk.arsdkengine.Iso8601;
 import com.parrot.drone.groundsdk.arsdkengine.instrument.skycontroller.SkyControllerBatteryInfo;
@@ -52,8 +50,12 @@ import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 
 import java.util.Date;
 
+import androidx.annotation.NonNull;
+
 /** RC controller for all remote controls of the SkyController family (starting from Skycontroller 3). */
 public class SkyControllerFamilyController extends RCController {
+
+//    private final RemoteControl.Model model;
 
     /**
      * Constructor.
@@ -66,6 +68,8 @@ public class SkyControllerFamilyController extends RCController {
     public SkyControllerFamilyController(@NonNull ArsdkEngine engine, @NonNull String uid,
                                          @NonNull RemoteControl.Model model, @NonNull String name) {
         super(engine, uid, model, name);
+
+//        this.model = model;
 
         registerComponentControllers(
                 // instruments
@@ -85,6 +89,11 @@ public class SkyControllerFamilyController extends RCController {
 
     @Override
     void sendDate(@NonNull Date currentDate) {
-        sendCommand(ArsdkFeatureSkyctrl.Common.encodeCurrentDateTime(Iso8601.toBaseDateAndTimeFormat(currentDate)));
+//        if (model == RemoteControl.Model.SKY_CONTROLLER) {
+//            sendCommand(ArsdkFeatureCommon.Common.encodeCurrentDate(Iso8601.toBaseDateOnlyFormat(currentDate)));
+//            sendCommand(ArsdkFeatureCommon.Common.encodeCurrentTime(Iso8601.toBaseTimeOnlyFormat(currentDate)));
+//         } else {
+            sendCommand(ArsdkFeatureSkyctrl.Common.encodeCurrentDateTime(Iso8601.toBaseDateAndTimeFormat(currentDate)));
+//        }
     }
 }

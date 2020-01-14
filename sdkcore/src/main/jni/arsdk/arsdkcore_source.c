@@ -76,24 +76,58 @@ static int source_open(const struct sdkcore_source *source, struct pdraw *pdraw)
 	RETURN_ERRNO_IF_FAILED(info != NULL, res);
 
 	char *url = NULL;
-	if (   info->type == ARSDK_DEVICE_TYPE_ANAFI4K
-	    || info->type == ARSDK_DEVICE_TYPE_ANAFI_THERMAL) {
-		res = asprintf(&url, "rtsp://%s/%s", info->addr, self->url) == -1 ?
-				-ENOMEM : 0;
+
+	// SMS 12/15/2019
+	if (strcmp(self->url, "net/rtsp/mambo") == 0) {
+		res = asprintf(&url, "rtsp://%s/%s", "192.168.99.1", "media/stream2") == -1 ? -ENOMEM : 0;
 		GOTO_IF_ERR(res, out);
-	} else if (info->type == ARSDK_DEVICE_TYPE_SKYCTRL_3) {
+
+	} else if (strcmp(self->url, "net/arstream2") == 0)  {
+		res = asprintf(&url, "rtsp://%s/%s", "127.0.0.1:5554", "media/stream2") == -1 ? -ENOMEM : 0;
+		GOTO_IF_ERR(res, out);
+
+	} else if (strcmp(self->url, "mux/arstream2") == 0)  {
+		res = asprintf(&url, "%s", "") == -1 ? -ENOMEM : 0;
+		GOTO_IF_ERR(res, out);
+
+	} else if (strcmp(self->url, "net/rtsp/anafi") == 0) {
+		res = asprintf(&url, "rtsp://%s/%s", info->addr, "live") == -1 ? -ENOMEM : 0;
+		GOTO_IF_ERR(res, out);
+
+	} else if (strcmp(self->url, "mux/rtsp/anafi") == 0) {
 		res = arsdk_device_create_tcp_proxy(device, info->type, 554,
 				&self->rtsp_proxy);
 		GOTO_IF_FAILED(self->rtsp_proxy != NULL, res, out);
 
-		res = asprintf(&url, "rtsp://127.0.0.1:%d/%s",
-				arsdk_device_tcp_proxy_get_port(self->rtsp_proxy),
-				self->url) == -1 ? -ENOMEM : 0;
+		res = asprintf(&url, "rtsp://127.0.0.1:%d/live",
+				arsdk_device_tcp_proxy_get_port(self->rtsp_proxy)) == -1 ? -ENOMEM : 0;
 		GOTO_IF_ERR(res, out);
-	} else {
-		res = -ENOSYS;
-		LOG_ERR(res);
-		goto out;
+
+	} else if (info->type == ARSDK_DEVICE_TYPE_ANAFI4K
+	        || info->type == ARSDK_DEVICE_TYPE_ANAFI_THERMAL) {
+	 	res = asprintf(&url, "rtsp://%s/%s", info->addr, self->url) == -1 ?
+	 			-ENOMEM : 0;
+	 	GOTO_IF_ERR(res, out);
+
+    } else if (info->type == ARSDK_DEVICE_TYPE_RS3) {
+        res = asprintf(&url, "%s", self->url) == -1 ?
+                -ENOMEM : 0;
+        GOTO_IF_ERR(res, out);
+
+    } else if (info->type == ARSDK_DEVICE_TYPE_SKYCTRL_3) {
+        res = arsdk_device_create_tcp_proxy(device, info->type, 554,
+                &self->rtsp_proxy);
+        GOTO_IF_FAILED(self->rtsp_proxy != NULL, res, out);
+
+        res = asprintf(&url, "rtsp://127.0.0.1:%d/%s",
+                arsdk_device_tcp_proxy_get_port(self->rtsp_proxy),
+                self->url) == -1 ? -ENOMEM : 0;
+        GOTO_IF_ERR(res, out);
+
+    } else {
+        res = -ENOSYS;
+        LOG_ERR(res);
+        goto out;
 	}
 
 	if (info->backend_type == ARSDK_BACKEND_TYPE_NET) {

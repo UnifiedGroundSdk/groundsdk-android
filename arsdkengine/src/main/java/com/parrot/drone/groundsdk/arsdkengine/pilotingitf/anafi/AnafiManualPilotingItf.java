@@ -32,18 +32,18 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.pilotingitf.anafi;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxDroneSession;
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.PilotingItfActivationController;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.StorageEntry;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.ActivablePilotingItfController;
-import com.parrot.drone.groundsdk.internal.device.pilotingitf.ManualCopterPilotingItfCore;
+import com.parrot.drone.groundsdk.internal.device.pilotingitf.ManualFlightPilotingItfCore;
 import com.parrot.drone.groundsdk.value.DoubleRange;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** ManualCopter piloting interface controller for Anafi family drones. */
 public class AnafiManualPilotingItf extends ActivablePilotingItfController {
@@ -102,7 +102,7 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
 
     /** Piloting interface for which this object is the backend. */
     @NonNull
-    private final ManualCopterPilotingItfCore mPilotingItf;
+    private final ManualFlightPilotingItfCore mPilotingItf;
 
     /** Persists device specific values for this piloting interface, such as settings ranges, supported status. */
     @Nullable
@@ -142,16 +142,21 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
      * @param activationController activation controller that owns this piloting interface controller
      */
     public AnafiManualPilotingItf(@NonNull PilotingItfActivationController activationController) {
+        this(activationController, false);
+    }
+    public AnafiManualPilotingItf(@NonNull PilotingItfActivationController activationController, @NonNull boolean withHoverLock) {
         super(activationController, true);
         mPresetDict = offlineSettingsEnabled() ? mDeviceController.getPresetDict().getDictionary(SETTINGS_KEY) : null;
         mDeviceDict = offlineSettingsEnabled() ? mDeviceController.getDeviceDict().getDictionary(SETTINGS_KEY) : null;
-        mPilotingItf = new ManualCopterPilotingItfCore(mComponentStore, new Backend());
+        mPilotingItf = new ManualFlightPilotingItfCore(mComponentStore, new Backend());
+
+        AnafiManualPilotingItf.this.setWithHoverLock(withHoverLock);
+
         loadPersistedData();
         if (isPersisted()) {
             mPilotingItf.publish();
         }
     }
-
 
     @Override
     public void requestActivation() {
@@ -167,7 +172,7 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
 
     @Override
     @NonNull
-    public final ManualCopterPilotingItfCore getPilotingItf() {
+    public final ManualFlightPilotingItfCore getPilotingItf() {
         return mPilotingItf;
     }
 
@@ -622,7 +627,7 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
 
     /** Backend of ManualCopterPilotingItfCore implementation. */
     private final class Backend extends ActivablePilotingItfController.Backend
-            implements ManualCopterPilotingItfCore.Backend {
+            implements ManualFlightPilotingItfCore.Backend {
 
         @Override
         public void takeOff() {
@@ -716,6 +721,16 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         @Override
         public void setRoll(int roll) {
             AnafiManualPilotingItf.this.setRoll(roll);
+        }
+
+        @Override
+        public void setFlag(boolean flag) {
+            AnafiManualPilotingItf.this.setFlag(flag);
+        }
+
+        @Override
+        public void setWithHoverLock(boolean withHoverLock) {
+            AnafiManualPilotingItf.this.setWithHoverLock(withHoverLock);
         }
 
         @Override

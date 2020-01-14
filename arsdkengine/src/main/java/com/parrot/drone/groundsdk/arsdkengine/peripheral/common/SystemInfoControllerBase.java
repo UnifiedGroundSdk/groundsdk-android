@@ -32,17 +32,18 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.common;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DeviceController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.PeripheralController;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.StorageEntry;
+import com.parrot.drone.groundsdk.device.peripheral.SystemInfo;
 import com.parrot.drone.groundsdk.facility.firmware.FirmwareIdentifier;
 import com.parrot.drone.groundsdk.facility.firmware.FirmwareVersion;
 import com.parrot.drone.groundsdk.internal.device.peripheral.SystemInfoCore;
 import com.parrot.drone.groundsdk.internal.utility.FirmwareBlackList;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** Abstract base implementation for SystemInfo peripheral controller. */
 public abstract class SystemInfoControllerBase extends PeripheralController<DeviceController<?>> {
@@ -61,9 +62,19 @@ public abstract class SystemInfoControllerBase extends PeripheralController<Devi
 
     /** Device CPU identifier setting. */
     private static final StorageEntry<String> CPU_ID_SETTING = StorageEntry.ofString("cpuId");
+    private static final StorageEntry<String> P7_ID_SETTING = StorageEntry.ofString("p7Id");
 
     /** Device board identifier setting. */
     private static final StorageEntry<String> BOARD_ID_SETTING = StorageEntry.ofString("boardId");
+
+    private static final StorageEntry<String> CONTROLLER_ARCOMMANDS_VERSION = StorageEntry.ofString("controllerARCommandsVersion");
+    private static final StorageEntry<String> SKYCONTROLLER_ARCOMMANDS_VERSION = StorageEntry.ofString("skyControllerARCommandsVersion");
+    private static final StorageEntry<String> DEVICE_ARCOMMANDS_VERSION = StorageEntry.ofString("deviceARCommandsVersion");
+
+    private static final StorageEntry<String> GPS_SOFTWARE_VERSION = StorageEntry.ofString("gpsSoftwareVersion");
+    private static final StorageEntry<String> GPS_HARDWARE_VERSION = StorageEntry.ofString("gpsHardwareVersion");
+
+    private static final StorageEntry<String> SKYCONTROLLER_VARIANT = StorageEntry.ofString("scVariant");
 
     /** SystemInfo peripheral for which this object is the backend. */
     @NonNull
@@ -189,6 +200,11 @@ public abstract class SystemInfoControllerBase extends PeripheralController<Devi
         mSystemInfo.updateCpuId(id);
     }
 
+    protected final void onP7Id(@NonNull String id) {
+        P7_ID_SETTING.save(mDeviceDict, id);
+        mSystemInfo.updateP7Id(id);
+    }
+
     /**
      * Called back by subclasses to notify reception of a board identifier value from the device.
      * <p>
@@ -201,6 +217,35 @@ public abstract class SystemInfoControllerBase extends PeripheralController<Devi
     protected final void onBoardId(@NonNull String id) {
         BOARD_ID_SETTING.save(mDeviceDict, id);
         mSystemInfo.updateBoardId(id);
+    }
+
+    protected final void onControllerARCommandsVersion(@NonNull String version) {
+        CONTROLLER_ARCOMMANDS_VERSION.save(mDeviceDict, version);
+        mSystemInfo.updateControllerARCommandsVersion(version);
+    }
+
+    protected final void onSkyControllerARCommandsVersion(@NonNull String version) {
+        SKYCONTROLLER_ARCOMMANDS_VERSION.save(mDeviceDict, version);
+        mSystemInfo.updateSkyControllerARCommandsVersion(version);
+    }
+
+    protected final void onDeviceARCommandsVersion(@NonNull String version) {
+        DEVICE_ARCOMMANDS_VERSION.save(mDeviceDict, version);
+        mSystemInfo.updateDeviceARCommandsVersion(version);
+    }
+
+    protected final void onGpsSoftwareVersion(@NonNull String version) {
+        GPS_SOFTWARE_VERSION.save(mDeviceDict, version);
+        mSystemInfo.updateGpsSoftwareVersion(version);
+    }
+
+    protected final void onGpsHardwareVersion(@NonNull String version) {
+        GPS_HARDWARE_VERSION.save(mDeviceDict, version);
+        mSystemInfo.updateGpsHardwareVersion(version);
+    }
+
+    protected final void onSkyControllerVariant(@NonNull SystemInfo.SkyControllerVariant variant) {
+        SKYCONTROLLER_VARIANT.save(mDeviceDict, variant.name());
     }
 
     /**
@@ -227,6 +272,8 @@ public abstract class SystemInfoControllerBase extends PeripheralController<Devi
      * @return {@code true} if any command was sent to the device, otherwise false
      */
     protected abstract boolean sendResetSettings();
+
+    protected abstract void sendReboot();
 
     /**
      * Tells whether device specific settings are persisted for this component.
@@ -257,9 +304,37 @@ public abstract class SystemInfoControllerBase extends PeripheralController<Devi
         if (cpuId != null) {
             mSystemInfo.updateCpuId(cpuId);
         }
+        String p7Id = P7_ID_SETTING.load(mDeviceDict);
+        if (p7Id != null) {
+            mSystemInfo.updateP7Id(p7Id);
+        }
         String boardId = BOARD_ID_SETTING.load(mDeviceDict);
         if (boardId != null) {
             mSystemInfo.updateBoardId(boardId);
+        }
+        String controllerVer = CONTROLLER_ARCOMMANDS_VERSION.load(mDeviceDict);
+        if (controllerVer != null) {
+            mSystemInfo.updateControllerARCommandsVersion(controllerVer);
+        }
+        String skyControllerVer = SKYCONTROLLER_ARCOMMANDS_VERSION.load(mDeviceDict);
+        if (skyControllerVer != null) {
+            mSystemInfo.updateSkyControllerARCommandsVersion(skyControllerVer);
+        }
+        String deviceVer = DEVICE_ARCOMMANDS_VERSION.load(mDeviceDict);
+        if (deviceVer != null) {
+            mSystemInfo.updateDeviceARCommandsVersion(deviceVer);
+        }
+        String gpsSoft = GPS_SOFTWARE_VERSION.load(mDeviceDict);
+        if (gpsSoft != null) {
+            mSystemInfo.updateGpsSoftwareVersion(gpsSoft);
+        }
+        String gpsHard = GPS_HARDWARE_VERSION.load(mDeviceDict);
+        if (gpsHard != null) {
+            mSystemInfo.updateGpsHardwareVersion(gpsHard);
+        }
+        String scVariant = SKYCONTROLLER_VARIANT.load(mDeviceDict);
+        if (scVariant != null) {
+            mSystemInfo.updateSkyControllerVariant(SystemInfo.SkyControllerVariant.valueOf(scVariant));
         }
     }
 
@@ -334,6 +409,11 @@ public abstract class SystemInfoControllerBase extends PeripheralController<Devi
         @Override
         public boolean resetSettings() {
             return sendResetSettings();
+        }
+
+        @Override
+        public void reboot() {
+            sendReboot();
         }
     };
 }

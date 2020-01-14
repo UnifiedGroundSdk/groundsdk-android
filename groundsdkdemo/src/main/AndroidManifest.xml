@@ -85,7 +85,7 @@
             android:label="@string/title_activity_return_home_settings"
             android:theme="@style/AppTheme"/>
         <activity
-            android:name=".hud.CopterHudActivity"
+            android:name=".hud.DroneHudActivity"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"/>
         <activity

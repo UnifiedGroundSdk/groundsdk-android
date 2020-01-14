@@ -32,13 +32,14 @@
 
 package com.parrot.drone.groundsdk.internal.device.peripheral.stream;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.peripheral.StreamServer;
 import com.parrot.drone.groundsdk.device.peripheral.stream.CameraLive;
 import com.parrot.drone.groundsdk.device.peripheral.stream.MediaReplay;
 import com.parrot.drone.groundsdk.internal.session.Session;
+import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
+
+import androidx.annotation.NonNull;
 
 /**
  * Implementation of the StreamServer interface which delegates calls to an underlying StreamServerCore.
@@ -72,6 +73,16 @@ final class StreamServerProxy implements StreamServer {
     @Override
     public boolean streamingEnabled() {
         return mServer.streamingEnabled();
+    }
+
+    @Override
+    public void setLegacyStreamingMode(ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode mode) {
+        mServer.setLegacyStreamingMode(mode);
+    }
+
+    @Override
+    public ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode getLegacyStreamingMode() {
+        return mServer.getLegacyStreamingMode();
     }
 
     @NonNull

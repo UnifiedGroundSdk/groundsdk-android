@@ -36,9 +36,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.format.DateUtils;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.R;
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.internal.ApplicationStorageProvider;
@@ -47,6 +44,9 @@ import com.parrot.drone.sdkcore.ulog.ULog;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_EPHEMERIS;
 
@@ -144,6 +144,8 @@ public final class EphemerisStore {
     public File getEphemeris(@NonNull Drone.Model droneModel) {
         File ephemeris = null;
         switch (droneModel) {
+            case BEBOP_V2:
+            case DISCO:
             case ANAFI_4K:
             case ANAFI_THERMAL:
                 ephemeris = mUbloxEphemeris.getValidEphemeris();

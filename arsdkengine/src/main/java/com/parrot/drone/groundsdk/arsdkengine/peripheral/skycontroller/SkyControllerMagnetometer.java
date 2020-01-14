@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.RCController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.RCPeripheralController;
 import com.parrot.drone.groundsdk.internal.device.peripheral.MagnetometerWith1StepCalibrationCore;
@@ -43,6 +40,9 @@ import com.parrot.drone.groundsdk.value.IntegerRange;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl.CalibrationstateMagnetocalibrationstateStatus;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** Magnetometer peripheral controller for SkyController family remote controls. */
 public class SkyControllerMagnetometer extends RCPeripheralController {
@@ -84,6 +84,13 @@ public class SkyControllerMagnetometer extends RCPeripheralController {
     /** Callbacks called when a command of the feature ArsdkFeatureSkyctrl.CalibrationState is decoded. */
     private final ArsdkFeatureSkyctrl.CalibrationState.Callback mCalibrationStateCallback =
             new ArsdkFeatureSkyctrl.CalibrationState.Callback() {
+                @Override
+                public void onMagnetoCalibrationQualityUpdatesState(int enabled) {
+                }
+
+                @Override
+                public void onMagnetoCalibrationStateV2(@Nullable ArsdkFeatureSkyctrl.CalibrationstateMagnetocalibrationstatev2State state) {
+                }
 
                 @Override
                 public void onMagnetoCalibrationState(@Nullable CalibrationstateMagnetocalibrationstateStatus status,

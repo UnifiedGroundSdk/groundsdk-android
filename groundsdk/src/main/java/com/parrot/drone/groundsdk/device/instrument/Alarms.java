@@ -32,11 +32,13 @@
 
 package com.parrot.drone.groundsdk.device.instrument;
 
-import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.Drone;
+
+import java.util.EnumMap;
+
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
 
 /**
  * Instrument that informs about alarms.
@@ -132,7 +134,11 @@ public interface Alarms extends Instrument {
              * fly properly, indicating a serious drone malfunction.</li>
              * </ul>
              */
-            STRONG_VIBRATIONS
+            STRONG_VIBRATIONS,
+
+            FLYPAD_BATTERY_LOW,
+
+            SKYCONTROLLER_BATTERY_LOW
         }
 
         /** Level of an alarm. */
@@ -167,6 +173,14 @@ public interface Alarms extends Instrument {
         @NonNull
         public abstract Level getLevel();
     }
+
+    /**
+     * Gets all alarms.
+     *
+     * @return an EnumMap of all alarms
+     */
+    @NonNull
+    EnumMap<Alarm.Kind, Alarm> getAlarms();
 
     /**
      * Gets the alarm of a given kind.

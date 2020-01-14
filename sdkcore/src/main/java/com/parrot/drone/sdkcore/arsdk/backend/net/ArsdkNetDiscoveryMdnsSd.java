@@ -32,8 +32,6 @@
 
 package com.parrot.drone.sdkcore.arsdk.backend.net;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.sdkcore.arsdk.ArsdkCore;
 import com.parrot.drone.sdkcore.arsdk.backend.net.mdnssdmin.MdnsSdMin;
 import com.parrot.drone.sdkcore.arsdk.device.ArsdkDevice;
@@ -44,6 +42,8 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import androidx.annotation.NonNull;
 
 import static com.parrot.drone.sdkcore.arsdk.Logging.TAG;
 
@@ -110,10 +110,10 @@ final class ArsdkNetDiscoveryMdnsSd extends ArsdkNetDiscovery {
                 JSONObject json = new JSONObject(txtRecords[0]);
                 return json.getString("device_id");
             } catch (JSONException e) {
-                ULog.w(TAG, "Error decoding txt record", e);
+                ULog.w(TAG, "Error decoding txt record - going with UNKNOWN");
             }
         }
-        return "";
+        return "UNKNOWN";
     }
 
     /**

@@ -32,19 +32,24 @@
 
 package com.parrot.drone.groundsdk.internal.device.peripheral;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.device.peripheral.CopterMotors;
 import com.parrot.drone.groundsdk.device.peripheral.Peripheral;
+import com.parrot.drone.groundsdk.device.peripheral.motor.MotorDetail;
 import com.parrot.drone.groundsdk.device.peripheral.motor.MotorError;
 import com.parrot.drone.groundsdk.internal.component.ComponentDescriptor;
 import com.parrot.drone.groundsdk.internal.component.ComponentStore;
 import com.parrot.drone.groundsdk.internal.component.SingletonComponentCore;
+import com.parrot.drone.groundsdk.internal.value.BooleanSettingCore;
+import com.parrot.drone.groundsdk.internal.value.SettingController;
+import com.parrot.drone.groundsdk.value.BooleanSetting;
 
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
 
 /**
  * Core class for CopterMotors.
@@ -55,6 +60,7 @@ public final class CopterMotorsCore extends SingletonComponentCore implements Co
     private static final ComponentDescriptor<Peripheral, CopterMotors> DESC =
             ComponentDescriptor.of(CopterMotors.class);
 
+    private final EnumMap<Motor, MotorDetail> mMotors;
     /**
      * Current motor error, by motor. Only motors currently in error have an entry in this map and their associated
      * error is never {@link MotorError#NONE}.
@@ -67,18 +73,32 @@ public final class CopterMotorsCore extends SingletonComponentCore implements Co
      */
     private final EnumMap<Motor, MotorError> mLatestMotorErrors;
 
+    private BooleanSettingCore mCutOutMode;
+
+    public interface Backend {
+        boolean setCutOutMode(boolean enable);
+    }
     /**
      * Constructor.
      *
      * @param peripheralStore store where this peripheral belongs
      */
-    public CopterMotorsCore(@NonNull ComponentStore<Peripheral> peripheralStore) {
+    public CopterMotorsCore(@NonNull ComponentStore<Peripheral> peripheralStore, @NonNull Backend backend) {
         super(DESC, peripheralStore);
+
+        mMotors = new EnumMap<>(Motor.class);
+        for (Motor motor : Motor.values()) {
+            mMotors.put(motor, new MotorDetail());
+        }
+
         mCurrentMotorErrors = new EnumMap<>(Motor.class);
         mLatestMotorErrors = new EnumMap<>(Motor.class);
+
         for (Motor motor : Motor.values()) {
             mLatestMotorErrors.put(motor, MotorError.NONE);
         }
+
+        mCutOutMode = new BooleanSettingCore(new SettingController(this::onSettingChange), backend::setCutOutMode);
     }
 
     @NonNull
@@ -99,6 +119,22 @@ public final class CopterMotorsCore extends SingletonComponentCore implements Co
                 : EnumSet.copyOf(mCurrentMotorErrors.keySet());
     }
 
+    @Override
+    public EnumMap<Motor, MotorDetail> motors() {
+        return mMotors;
+    }
+
+    public BooleanSetting cutOutMode() {
+        return mCutOutMode;
+    }
+
+    public CopterMotorsCore updateCutOutMode(boolean enable) {
+        if (this.mCutOutMode.isEnabled() != enable) {
+            this.mCutOutMode.setEnabled(enable);
+        }
+        return this;
+    }
+
     /**
      * Updates a motor's current error.
      *
@@ -113,6 +149,7 @@ public final class CopterMotorsCore extends SingletonComponentCore implements Co
         } else {
             mChanged |= mCurrentMotorErrors.put(motor, error) != error;
         }
+        mMotors.put(motor, Objects.requireNonNull(mMotors.get(motor)).updateError(error));
         return this;
     }
 
@@ -128,6 +165,25 @@ public final class CopterMotorsCore extends SingletonComponentCore implements Co
         // only report a change if the motor is not currently in error.
         mChanged |= mLatestMotorErrors.put(motor, error) != error && !mCurrentMotorErrors.containsKey(motor);
         return this;
+    }
+
+    public CopterMotorsCore updateMotorDetail(@NonNull Motor motor, @NonNull String type, @NonNull String software, @NonNull String hardware) {
+        mMotors.put(motor, Objects.requireNonNull(mMotors.get(motor)).updateDetail(type, software, hardware));
+        mChanged = true;
+        return this;
+    }
+
+    @NonNull
+    public CopterMotorsCore cancelSettingsRollbacks() {
+        mCutOutMode.cancelRollback();
+        return this;
+    }
+
+    private void onSettingChange(boolean fromUser) {
+        mChanged = true;
+        if (fromUser) {
+            notifyUpdated();
+        }
     }
 }
 

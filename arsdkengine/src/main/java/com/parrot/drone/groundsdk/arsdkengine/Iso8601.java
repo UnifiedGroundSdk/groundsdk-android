@@ -32,13 +32,13 @@
 
 package com.parrot.drone.groundsdk.arsdkengine;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Utility class to handle date/time ISO 8601 formatting.
@@ -56,6 +56,18 @@ public final class Iso8601 {
     public static String toBaseDateAndTimeFormat(@NonNull Date date) {
         //noinspection ConstantConditions: INSTANCE has a default initial value
         return BASE_DATE_TIME_FORMAT.get().format(date);
+    }
+
+    @NonNull
+    public static String toBaseDateOnlyFormat(@NonNull Date date) {
+        //noinspection ConstantConditions: INSTANCE has a default initial value
+        return BASE_DATE_ONLY_FORMAT.get().format(date);
+    }
+
+    @NonNull
+    public static String toBaseTimeOnlyFormat(@NonNull Date date) {
+        //noinspection ConstantConditions: INSTANCE has a default initial value
+        return BASE_TIME_ONLY_FORMAT.get().format(date);
     }
 
     /**
@@ -78,6 +90,31 @@ public final class Iso8601 {
 
         /** Base date and time format. */
         private static final String FORMAT = "yyyyMMdd'T'HHmmssZZZ";
+
+        @Override
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat(FORMAT, Locale.ROOT);
+        }
+    };
+
+
+    /** Base ISO 8601 date/time formatter, one per thread to encapsulate SimpleDateFormat in a thread-safe manner. */
+    private static final ThreadLocal<SimpleDateFormat> BASE_DATE_ONLY_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+
+        /** Base date and time format. */
+        private static final String FORMAT = "yyyy-MM-dd";
+
+        @Override
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat(FORMAT, Locale.ROOT);
+        }
+    };
+
+    /** Base ISO 8601 date/time formatter, one per thread to encapsulate SimpleDateFormat in a thread-safe manner. */
+    private static final ThreadLocal<SimpleDateFormat> BASE_TIME_ONLY_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+
+        /** Base date and time format. */
+        private static final String FORMAT = "'T'HHmmssZZZ";
 
         @Override
         protected SimpleDateFormat initialValue() {

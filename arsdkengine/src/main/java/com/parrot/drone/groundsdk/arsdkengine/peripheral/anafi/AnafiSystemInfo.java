@@ -32,14 +32,14 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SystemInfoControllerBase;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureCommon;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** SystemInfo peripheral controller for Anafi family drones. */
 public final class AnafiSystemInfo extends SystemInfoControllerBase {
@@ -64,12 +64,19 @@ public final class AnafiSystemInfo extends SystemInfoControllerBase {
     }
 
     @Override
+    protected void sendReboot() {
+        sendCommand(ArsdkFeatureCommon.Common.encodeReboot());
+    }
+
+    @Override
     protected void onCommandReceived(@NonNull ArsdkCommand command) {
         int featureId = command.getFeatureId();
         if (featureId == ArsdkFeatureCommon.SettingsState.UID) {
             ArsdkFeatureCommon.SettingsState.decode(command, mCommonSettingsStateCallbacks);
         } else if (featureId == ArsdkFeatureArdrone3.SettingsState.UID) {
             ArsdkFeatureArdrone3.SettingsState.decode(command, mArdrone3SettingsStateCallbacks);
+        } else  if (featureId == ArsdkFeatureCommon.ARLibsVersionsState.UID) {
+            ArsdkFeatureCommon.ARLibsVersionsState.decode(command, mCommonARLibsVersionsStateCallbacks);
         }
     }
 
@@ -140,8 +147,42 @@ public final class AnafiSystemInfo extends SystemInfoControllerBase {
             new ArsdkFeatureArdrone3.SettingsState.Callback() {
 
                 @Override
+                public void onProductGPSVersionChanged(String software, String hardware) {
+                    onGpsSoftwareVersion(software);
+                    onGpsHardwareVersion(hardware);
+                    mSystemInfo.notifyUpdated();
+                }
+
+                @Override
                 public void onCPUID(String id) {
                     onCpuId(id);
+                    mSystemInfo.notifyUpdated();
+                }
+
+                @Override
+                public void onP7ID(String id) {
+                    onP7Id(id);
+                    mSystemInfo.notifyUpdated();
+                }
+            };
+
+    private final ArsdkFeatureCommon.ARLibsVersionsState.Callback mCommonARLibsVersionsStateCallbacks =
+            new ArsdkFeatureCommon.ARLibsVersionsState.Callback() {
+                @Override
+                public void onControllerLibARCommandsVersion(String version) {
+                    onControllerARCommandsVersion(version);
+                    mSystemInfo.notifyUpdated();
+                }
+
+                @Override
+                public void onSkyControllerLibARCommandsVersion(String version) {
+                    onSkyControllerARCommandsVersion(version);
+                    mSystemInfo.notifyUpdated();
+                }
+
+                @Override
+                public void onDeviceLibARCommandsVersion(String version) {
+                    onDeviceARCommandsVersion(version);
                     mSystemInfo.notifyUpdated();
                 }
             };

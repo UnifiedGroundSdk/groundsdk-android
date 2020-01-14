@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.internal.device.peripheral;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.device.peripheral.Gimbal;
 import com.parrot.drone.groundsdk.device.peripheral.Peripheral;
 import com.parrot.drone.groundsdk.internal.component.ComponentDescriptor;
@@ -52,6 +49,9 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** Core class for Gimbal. */
 public class GimbalCore extends SingletonComponentCore implements Gimbal {

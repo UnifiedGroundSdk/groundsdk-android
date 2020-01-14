@@ -33,10 +33,7 @@
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
 import android.text.TextUtils;
-
-import androidx.annotation.CallSuper;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.util.SparseArray;
 
 import com.parrot.drone.groundsdk.arsdkengine.ArsdkEngine;
 import com.parrot.drone.groundsdk.arsdkengine.DeviceProvider;
@@ -44,11 +41,14 @@ import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxRecorder;
 import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxSession;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
 import com.parrot.drone.groundsdk.device.DeviceConnector;
+import com.parrot.drone.groundsdk.device.DeviceModel;
 import com.parrot.drone.groundsdk.device.DeviceState;
+import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.facility.firmware.FirmwareVersion;
 import com.parrot.drone.groundsdk.internal.device.DeviceConnectorCore;
 import com.parrot.drone.groundsdk.internal.device.DeviceCore;
 import com.parrot.drone.groundsdk.internal.device.DeviceStateCore;
+import com.parrot.drone.groundsdk.internal.ftp.FtpSession;
 import com.parrot.drone.groundsdk.internal.http.HttpClient;
 import com.parrot.drone.groundsdk.internal.http.HttpSession;
 import com.parrot.drone.groundsdk.internal.tasks.Executor;
@@ -77,6 +77,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_CTRL;
 
@@ -340,6 +344,20 @@ public abstract class DeviceController<D extends DeviceCore> {
      */
     @Nullable
     private HttpSession mHttpSession;
+
+    /**
+     * FTP (ftp flightplan) proxy, {@code null} until the device controller is successfully link-connected and after disconnection.
+     */
+    @Nullable
+    private FtpSession mFlightPlanFtpSession;
+
+    /**
+     * FTP (ftp mediastore) proxy, {@code null} until the device controller is successfully link-connected and after disconnection.
+     */
+    @Nullable
+    private FtpSession mMediaStoreFtpSession;
+
+    private SparseArray<ArsdkTcpProxy> ftpProxies = new SparseArray<>();
 
     /** Device controller protocol backend, {@code null} until the device controller is successfully link-connected. */
     @Nullable
@@ -660,8 +678,34 @@ public abstract class DeviceController<D extends DeviceCore> {
 
         sendDate(new Date());
 
-        // create HTTP proxy
-        mHttpProxy = mBackend.createTcpProxy(80, this::onCreateTcpProxyCompleted);
+        final DeviceModel model = mDevice.getModel();
+
+        // create proxies for "ftp" devices
+        if (model == Drone.Model.BEBOP_V1 || model == Drone.Model.BEBOP_V2 || model == Drone.Model.DISCO) {
+//            boolean skyController;
+//            boolean sc1 = false;
+
+//            final DeviceConnectorCore connector = getActiveProvider() == null ? null : getActiveProvider().getConnector();
+//            if (connector != null) {
+//                skyController = connector.getType() == DeviceConnector.Type.REMOTE_CONTROL;
+//                if (skyController && connector.getUid() != null) {
+//                    final RemoteControlCore rcc = getEngine().getUtilityOrThrow(RemoteControlStore.class).get(connector.getUid());
+//                    if (rcc != null) {
+//                        sc1 = RemoteControl.Model.SKY_CONTROLLER.equals(rcc.getModel());
+//                    }
+//                }
+//            }
+
+            ftpProxies.append(21, mBackend.createTcpProxy(21, this::onCreateMediaStoreFtpProxyCompleted));
+            ftpProxies.append(61, mBackend.createTcpProxy(61, this::onCreateFlightPlanFtpProxyCompleted));
+
+            mConnectionState = ControllerConnectionState.GETTING_ALL_SETTINGS;
+            sendGetAllSettings();
+        } else {
+            // create HTTP proxy for "modern" devices
+            mHttpProxy = mBackend.createTcpProxy( model == Drone.Model.MAMBO ? 8888 : 80, this::onCreateHttpProxyCompleted );
+        }
+
         postConnectionTimeout();
     }
 
@@ -776,14 +820,84 @@ public abstract class DeviceController<D extends DeviceCore> {
      *                      be {@code null} in case network-bound sockets are not relevant or not supported by the
      *                      device backend
      */
-    private void onCreateTcpProxyCompleted(@Nullable String address, int port, @Nullable SocketFactory socketFactory) {
-        ULog.i(TAG_CTRL, "TCP proxy created [address: " + address + ", port: " + port + "]");
+    private void onCreateHttpProxyCompleted(@Nullable String address, int port, @Nullable SocketFactory socketFactory) {
+        ULog.i(TAG_CTRL, "TCP proxy created [address: " + address + ", port: " + port + "] HTTP");
         if (address != null && port != 0) {
             // Create HttpSession
             mHttpSession = new HttpSession(address, port, socketFactory);
         }
         mConnectionState = ControllerConnectionState.GETTING_ALL_SETTINGS;
         sendGetAllSettings();
+    }
+
+    /**
+     * Called when failed or succeed to create a TCP proxy with the controlled device.
+     *
+     * @param address       proxy address or {@code null} if failed to create proxy
+     * @param port          proxy port
+     * @param socketFactory factory for creating sockets bound to the network through which this proxy communicates, may
+     *                      be {@code null} in case network-bound sockets are not relevant or not supported by the
+     *                      device backend
+     */
+    private void onCreateMediaStoreFtpProxyCompleted(@Nullable String address, int port, @Nullable SocketFactory socketFactory) {
+        ULog.i(TAG_CTRL, "TCP proxy created [address: " + address + ", port: " + port + "] FTP MEDIA");
+        if (address != null && port != 0) {
+            mMediaStoreFtpSession = new FtpSession(address, port, socketFactory, this::createFtpProxy, this::removeFtpProxy);
+        }
+    }
+
+    /**
+     * Called when failed or succeed to create a TCP proxy with the controlled device.
+     *
+     * @param address       proxy address or {@code null} if failed to create proxy
+     * @param port          proxy port
+     * @param socketFactory factory for creating sockets bound to the network through which this proxy communicates, may
+     *                      be {@code null} in case network-bound sockets are not relevant or not supported by the
+     *                      device backend
+     */
+    private void onCreateFlightPlanFtpProxyCompleted(@Nullable String address, int port, @Nullable SocketFactory socketFactory) {
+        ULog.i(TAG_CTRL, "TCP proxy created [address: " + address + ", port: " + port + "] FTP FLIGHTPLAN");
+        if (address != null && port != 0) {
+            mFlightPlanFtpSession = new FtpSession(address, port, socketFactory, this::createFtpProxy, this::removeFtpProxy);
+        }
+    }
+
+    // proxy chain
+    private void createFtpProxy(final int port, ArsdkTcpProxy.Listener proxyCreatedCallback) {
+        if (mBackend != null && ftpProxies.indexOfKey(port) < 0) {
+            ftpProxies.append(port, mBackend.createTcpProxy(port, proxyCreatedCallback));
+            ULog.d(TAG_CTRL, "TCP proxy created for port " + port);
+        } else {
+            ULog.d(TAG_CTRL, "TCP proxy already exists for port " + port);
+        }
+    }
+
+    private void removeFtpProxy(final int port) {
+        final ArsdkTcpProxy proxy = ftpProxies.get(port);
+
+        if (proxy != null) {
+            proxy.close();
+            ftpProxies.delete(port);
+            ULog.d(TAG_CTRL, "TCP proxy deleted for port " + port);
+        } else {
+            ULog.d(TAG_CTRL, "TCP proxy does not exist for port " + port);
+        }
+    }
+
+    private void cleanupFtpProxies() {
+        // clean up left over proxies (there should only be two)
+        while (0 < ftpProxies.size()) {
+            final int key = ftpProxies.keyAt(0);
+
+            final ArsdkTcpProxy proxy = ftpProxies.get(key);
+            if (proxy != null) {
+                proxy.close();
+            } else {
+                ULog.d(TAG_CTRL, "TCP proxy is null for port " + key);
+            }
+            ftpProxies.remove(key);
+            ULog.d(TAG_CTRL, "TCP proxy cleaned for port " + key);
+        }
     }
 
     /**
@@ -1029,6 +1143,14 @@ public abstract class DeviceController<D extends DeviceCore> {
         return mHttpSession == null ? null : mHttpSession.client(clientType);
     }
 
+    public FtpSession getFlightPlanFtpSession() {
+        return mFlightPlanFtpSession;
+    }
+
+    public FtpSession getMediaStoreFtpSession() {
+        return mMediaStoreFtpSession;
+    }
+
     /**
      * Asks the managed device to get all its settings.
      * <p>
@@ -1164,6 +1286,17 @@ public abstract class DeviceController<D extends DeviceCore> {
                 mHttpProxy.close();
                 mHttpProxy = null;
             }
+
+            if (mFlightPlanFtpSession != null) {
+                mFlightPlanFtpSession = null;
+            }
+
+            if (mMediaStoreFtpSession != null) {
+                mMediaStoreFtpSession = null;
+            }
+
+            cleanupFtpProxies();
+
             clearConnectionTimeout();
             onProtocolDisconnected();
 

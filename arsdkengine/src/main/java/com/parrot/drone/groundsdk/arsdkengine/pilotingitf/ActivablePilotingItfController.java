@@ -32,13 +32,13 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.pilotingitf;
 
-import androidx.annotation.CallSuper;
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.PilotingItfActivationController;
 import com.parrot.drone.groundsdk.device.pilotingitf.Activable;
 import com.parrot.drone.groundsdk.internal.device.pilotingitf.ActivablePilotingItfCore;
 import com.parrot.drone.sdkcore.ulog.ULog;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_PITF;
 
@@ -182,6 +182,18 @@ public abstract class ActivablePilotingItfController extends PilotingItfControll
     }
 
     /**
+     * Sets the current piloting command HoverlLock feature value for this piloting interface.
+     *
+     * @param withHoverLock toggle HoverLock feature (defaults to disabled)
+     *
+     * @return {@code this}, to allow call chaining
+     */
+    protected final ActivablePilotingItfController setWithHoverLock(boolean withHoverLock) {
+        mActivationController.onWithHoverLock(this, withHoverLock);
+        return this;
+    }
+
+    /**
      * Sets the current piloting command pitch value for this piloting interface.
      *
      * @param pitch piloting command pitch
@@ -226,6 +238,18 @@ public abstract class ActivablePilotingItfController extends PilotingItfControll
      */
     protected final ActivablePilotingItfController setGaz(int gaz) {
         mActivationController.onGaz(this, gaz);
+        return this;
+    }
+
+    /**
+     * Sets the current piloting command flag value for this piloting interface.
+     *
+     * @param flag piloting command (hoverlock) flag
+     *
+     * @return {@code this}, to allow call chaining
+     */
+    protected final ActivablePilotingItfController setFlag(boolean flag) {
+        mActivationController.onFlag(this, flag);
         return this;
     }
 

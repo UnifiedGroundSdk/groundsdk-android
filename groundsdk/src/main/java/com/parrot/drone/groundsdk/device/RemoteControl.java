@@ -32,11 +32,11 @@
 
 package com.parrot.drone.groundsdk.device;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.instrument.Instrument;
 import com.parrot.drone.groundsdk.device.peripheral.Peripheral;
+
+import androidx.annotation.NonNull;
 
 /**
  * A generic remote control. This is the base class to manage a specific remote control.
@@ -48,6 +48,18 @@ public abstract class RemoteControl implements Instrument.Provider, Peripheral.P
      */
     @SuppressWarnings("NullableProblems") // name() in enum is virtually @NonNull
     public enum Model implements DeviceModel {
+
+        /** Sky Controller remote control. */
+        SKY_CONTROLLER(0x0903),
+
+        /** Sky Controller NG remote control. */
+        SKY_CONTROLLER_NG(0x0913),
+
+        /** Sky Controller 2 remote control. */
+        SKY_CONTROLLER_2(0x090f),
+
+        /** Sky Controller 2P remote control. */
+        SKY_CONTROLLER_2P(0x0915),
 
         /** Sky Controller 3 remote control. */
         SKY_CONTROLLER_3(0x0918);

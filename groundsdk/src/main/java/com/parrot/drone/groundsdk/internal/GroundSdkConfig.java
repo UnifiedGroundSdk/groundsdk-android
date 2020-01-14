@@ -36,11 +36,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 
-import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
-
 import com.parrot.drone.groundsdk.BuildConfig;
 import com.parrot.drone.groundsdk.R;
 import com.parrot.drone.groundsdk.device.DeviceModel;
@@ -64,6 +59,11 @@ import com.parrot.drone.groundsdk.internal.utility.FlightLogStorage;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 /**
  * GroundSdk Global Configuration.
@@ -193,6 +193,12 @@ public final class GroundSdkConfig {
     /** {@code true} if the wifi access point country should automatically be selected from system location. */
     private boolean mAutoSelectWifiCountry;
 
+    /** {@code true} if the geocoder should be loaded */
+    private boolean mEnableGeocoder;
+
+    /** {@code true} if the activation engine should be loaded */
+    private boolean mEnableActivationEngine;
+
     /** Default country code returned by the reverse geocoder. Empty to not return a default country code. */
     @NonNull
     private final String mReverseGeocoderDefaultCountryCode;
@@ -314,6 +320,8 @@ public final class GroundSdkConfig {
         mFlightDataEnabled = resources.getBoolean(R.bool.gsdk_flight_data_enabled);
         mAutoConnectionAtStartup = resources.getBoolean(R.bool.gsdk_auto_connection_at_startup);
         mAutoSelectWifiCountry = resources.getBoolean(R.bool.gsdk_auto_select_wifi_country);
+        mEnableGeocoder = resources.getBoolean(R.bool.gsdk_geocoder_enabled);
+        mEnableActivationEngine = resources.getBoolean(R.bool.gsdk_activation_engine_enabled);
         mReverseGeocoderDefaultCountryCode = resources.getString(R.string.gsdk_reverse_geocoder_default_country_code);
         mOfflineSettingsMode = offlineSettingsModeFromString(resources.getString(R.string.gsdk_offline_settings_mode));
         mSupportedDevices = deviceModelsFromStringArray(resources.getStringArray(R.array.gsdk_supported_devices));
@@ -375,6 +383,7 @@ public final class GroundSdkConfig {
         mFlightDataEnabled = false;
         mAutoConnectionAtStartup = false;
         mAutoSelectWifiCountry = false;
+        mEnableGeocoder = false;
         mReverseGeocoderDefaultCountryCode = "";
         mOfflineSettingsMode = OfflineSettingsMode.MODEL;
         mSupportedDevices = DeviceModels.ALL;
@@ -603,6 +612,24 @@ public final class GroundSdkConfig {
      */
     public boolean shouldAutoSelectWifiCountry() {
         return mAutoSelectWifiCountry;
+    }
+
+    /**
+     * Tells whether the geocoder engine should be loaded or not.
+     *
+     * @return {@code true} if geocoder engine is enabled, {@code false} otherwise
+     */
+    public boolean shouldEnableGeocoder() {
+        return mEnableGeocoder;
+    }
+
+    /**
+     * Tells whether the Activation engine should be loaded or not.
+     *
+     * @return {@code true} if Activation engine is enabled, {@code false} otherwise
+     */
+    public boolean shouldEnableActivationEngine() {
+        return mEnableActivationEngine;
     }
 
     /**
@@ -910,6 +937,17 @@ public final class GroundSdkConfig {
     public void autoSelectWifiCountry(boolean enable) {
         checkLocked();
         mAutoSelectWifiCountry = enable;
+    }
+
+    /**
+     * Configures whether the geocoder engine should be started.
+     *
+     * @param enable {@code true} to enable the geocoder engine,
+     *               otherwise {@code false} to disable this behavior.
+     */
+    public void enableGeocoder(boolean enable) {
+        checkLocked();
+        mEnableGeocoder = enable;
     }
 
     /**

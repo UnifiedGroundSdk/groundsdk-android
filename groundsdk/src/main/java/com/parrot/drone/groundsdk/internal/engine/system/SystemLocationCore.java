@@ -42,17 +42,11 @@ import android.location.LocationManager;
 import android.location.OnNmeaMessageListener;
 import android.os.Bundle;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresPermission;
-import androidx.annotation.VisibleForTesting;
-
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
 import com.parrot.drone.groundsdk.internal.Logging;
 import com.parrot.drone.groundsdk.internal.utility.SystemLocation;
 import com.parrot.drone.sdkcore.ulog.ULog;
@@ -62,9 +56,15 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
+import androidx.annotation.VisibleForTesting;
+
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static com.google.android.gms.common.ConnectionResult.SUCCESS;
+import static com.google.android.gms.location.LocationServices.getFusedLocationProviderClient;
 
 /**
  * Implementation class for {@code SystemLocation} monitoring utility.
@@ -127,7 +127,7 @@ public final class SystemLocationCore implements SystemLocation {
         if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION)) {
             FusedLocationProviderClient fusedLocationClient = null;
             if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == SUCCESS) {
-                fusedLocationClient = LocationServices.getFusedLocationProviderClient(context);
+                fusedLocationClient = getFusedLocationProviderClient(context);
             }
             return new SystemLocationCore(context, (LocationManager) context.getSystemService(
                     Context.LOCATION_SERVICE), fusedLocationClient, preferredTimeInterval, fastestTimeInterval,

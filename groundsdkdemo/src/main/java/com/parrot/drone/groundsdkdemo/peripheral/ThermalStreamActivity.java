@@ -36,8 +36,6 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.peripheral.MainCamera;
 import com.parrot.drone.groundsdk.device.peripheral.StreamServer;
@@ -52,6 +50,8 @@ import com.parrot.drone.groundsdkdemo.GroundSdkActivityBase;
 import com.parrot.drone.groundsdkdemo.R;
 import com.parrot.drone.groundsdkdemo.settings.ToggleSettingView;
 
+import androidx.annotation.NonNull;
+
 import static com.parrot.drone.groundsdkdemo.Extras.EXTRA_DEVICE_UID;
 
 public class ThermalStreamActivity extends GroundSdkActivityBase {
@@ -64,13 +64,15 @@ public class ThermalStreamActivity extends GroundSdkActivityBase {
 
     private GsdkStreamView mStreamView;
 
+    private Drone drone;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_thermal_stream);
 
-        Drone drone = groundSdk().getDrone(getIntent().getStringExtra(EXTRA_DEVICE_UID), uid -> finish());
+        drone = groundSdk().getDrone(getIntent().getStringExtra(EXTRA_DEVICE_UID), uid -> finish());
         if (drone == null) {
             finish();
             return;

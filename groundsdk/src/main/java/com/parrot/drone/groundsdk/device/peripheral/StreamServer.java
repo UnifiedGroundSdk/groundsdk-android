@@ -32,13 +32,14 @@
 
 package com.parrot.drone.groundsdk.device.peripheral;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.peripheral.stream.CameraLive;
 import com.parrot.drone.groundsdk.device.peripheral.stream.MediaReplay;
 import com.parrot.drone.groundsdk.stream.Stream;
+import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
+
+import androidx.annotation.NonNull;
 
 /**
  * StreamServer peripheral interface.
@@ -75,6 +76,21 @@ public interface StreamServer extends Peripheral {
      * @return {@code true} if streaming is enabled, otherwise {@code false}
      */
     boolean streamingEnabled();
+
+
+    /**
+     * Sets the legacy device (Bebop / Evinrude) which streaming mode to use
+     *
+     * @param mode {@code ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode} streaming mode
+     */
+    void setLegacyStreamingMode(ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode mode);
+
+    /**
+     * Returns the streaming mode for legacy devices (Bebop / Evinrude)
+     *
+     * @return {@code ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode} streaming mode
+     */
+    ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode getLegacyStreamingMode();
 
     /**
      * Provides access to the drone camera live stream.

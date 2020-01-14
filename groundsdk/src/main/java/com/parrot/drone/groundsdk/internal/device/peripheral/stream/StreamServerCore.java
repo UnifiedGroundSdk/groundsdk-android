@@ -32,10 +32,6 @@
 
 package com.parrot.drone.groundsdk.internal.device.peripheral.stream;
 
-import androidx.annotation.CallSuper;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.device.peripheral.Peripheral;
 import com.parrot.drone.groundsdk.device.peripheral.StreamServer;
 import com.parrot.drone.groundsdk.internal.component.ComponentCore;
@@ -44,10 +40,15 @@ import com.parrot.drone.groundsdk.internal.component.ComponentStore;
 import com.parrot.drone.groundsdk.internal.session.Session;
 import com.parrot.drone.groundsdk.internal.stream.StreamCore;
 import com.parrot.drone.groundsdk.stream.Stream;
+import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
 import com.parrot.drone.sdkcore.stream.SdkCoreStream;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** Core class for StreamServer. */
 public final class StreamServerCore extends ComponentCore {
@@ -70,6 +71,9 @@ public final class StreamServerCore extends ComponentCore {
          */
         @Nullable
         SdkCoreStream openStream(@NonNull String url, @Nullable String track, @NonNull SdkCoreStream.Client client);
+
+        void enableLegacyVideoStreaming(final boolean enable);
+        void setLegacyVideoStreamingMode(final ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode mode);
     }
 
     /** Backend of this peripheral. */
@@ -119,6 +123,8 @@ public final class StreamServerCore extends ComponentCore {
     @Nullable
     private CameraLiveCore mCameraLive;
 
+    public ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode legacyStreamingMode;
+
     /**
      * Constructor.
      *
@@ -164,7 +170,10 @@ public final class StreamServerCore extends ComponentCore {
      *
      * @param enable {@code true} to enable streaming, {@code false} to disable it
      */
-    void enableStreaming(boolean enable) {
+     void enableStreaming(boolean enable) {
+        // send regardless of prior state
+        mBackend.enableLegacyVideoStreaming(enable);
+
         if (enable != mStreamingEnabled) {
             mStreamingEnabled = enable;
             mChanged = true;
@@ -184,6 +193,18 @@ public final class StreamServerCore extends ComponentCore {
      */
     boolean streamingEnabled() {
         return mStreamingEnabled;
+    }
+
+
+    void setLegacyStreamingMode(ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode mode) {
+        if (mode != legacyStreamingMode) {
+            mBackend.setLegacyVideoStreamingMode(mode);
+        }
+    }
+
+
+    ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode getLegacyStreamingMode() {
+        return legacyStreamingMode;
     }
 
     /**
@@ -273,4 +294,7 @@ public final class StreamServerCore extends ComponentCore {
             mCameraLive.resume();
         }
     }
+
+
+
 }

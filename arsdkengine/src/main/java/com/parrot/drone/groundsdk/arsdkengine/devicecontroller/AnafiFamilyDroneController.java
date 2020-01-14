@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.ArsdkEngine;
 import com.parrot.drone.groundsdk.arsdkengine.Iso8601;
 import com.parrot.drone.groundsdk.arsdkengine.ephemeris.EphemerisUploadProtocol;
@@ -69,6 +66,7 @@ import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.media.AnafiMediaS
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.thermalcontrol.AnafiThermalControl;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.wifi.AnafiWifiAccessPoint;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.DebugDevToolbox;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SensorsState;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.crashml.HttpReportDownloader;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.flightlog.HttpFlightLogDownloader;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.FirmwareUpdaterProtocol;
@@ -89,6 +87,9 @@ import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureCommon;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import java.util.Date;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** Drone controller for all drones of the Anafi family. */
 public class AnafiFamilyDroneController extends DroneController {
@@ -135,6 +136,7 @@ public class AnafiFamilyDroneController extends DroneController {
                 new AnafiSystemInfo(this),
                 new AnafiBeeper(this),
                 new AnafiMotors(this),
+                new SensorsState(this),
                 new AnafiGeofence(this),
                 new AnafiMediaStore(this),
                 new AnafiRemovableUserStorage(this),

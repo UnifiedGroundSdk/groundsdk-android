@@ -32,9 +32,9 @@
 
 package com.parrot.drone.groundsdk.device.peripheral;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
+
+import androidx.annotation.NonNull;
 
 /**
  * SystemInfo peripheral interface for Drone and RemoteControl devices.
@@ -52,6 +52,15 @@ import com.parrot.drone.groundsdk.Ref;
  * @see Peripheral.Provider#getPeripheral(Class, Ref.Observer)
  */
 public interface SystemInfo extends Peripheral {
+
+    /**
+     * Represents the variant of the original Sky Controller
+     */
+    enum SkyControllerVariant {
+        GENERATION_ONE,
+        GENERATION_TWO,
+        NOT_APPLICABLE
+    }
 
     /**
      * Gets the device firmware version.
@@ -97,6 +106,9 @@ public interface SystemInfo extends Peripheral {
     @NonNull
     String getCpuIdentifier();
 
+    @NonNull
+    String getP7Identifier();
+
     /**
      * Gets the device board identifier.
      *
@@ -104,6 +116,25 @@ public interface SystemInfo extends Peripheral {
      */
     @NonNull
     String getBoardIdentifier();
+
+    @NonNull
+    String getControllerARCommandsVersion();
+
+    @NonNull
+    String getSkyControllerARCommandsVersion();
+
+    @NonNull
+    String getDeviceARCommandsVersion();
+
+
+    @NonNull
+    String getGpsSoftwareVersion();
+
+    @NonNull
+    String getGpsHardwareVersion();
+
+    @NonNull
+    SkyControllerVariant getSkyControllerVariant();
 
     /**
      * Tells whether a factory reset is currently occurring on the device.
@@ -134,4 +165,9 @@ public interface SystemInfo extends Peripheral {
      * @return {@code true} if the reset operation could be initiated, otherwise {@code false}
      */
     boolean resetSettings();
+
+    /**
+     * Commands the device to reboot
+     */
+    void reboot();
 }

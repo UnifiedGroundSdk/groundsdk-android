@@ -32,22 +32,28 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.annotation.SuppressLint;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.ProxyDeviceController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.PeripheralController;
 import com.parrot.drone.groundsdk.device.DeviceModel;
 import com.parrot.drone.groundsdk.device.Drone;
+import com.parrot.drone.groundsdk.device.RemoteControl;
 import com.parrot.drone.groundsdk.device.peripheral.DroneFinder;
 import com.parrot.drone.groundsdk.internal.device.DeviceModels;
 import com.parrot.drone.groundsdk.internal.device.peripheral.DroneFinderCore;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureDroneManager;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureGeneric;
+import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** DroneFinder peripheral controller for SkyController family remote controls. */
 public class SkyControllerDroneFinder extends PeripheralController<ProxyDeviceController<?>> {
@@ -60,6 +66,9 @@ public class SkyControllerDroneFinder extends PeripheralController<ProxyDeviceCo
     @NonNull
     private final Map<String, DroneFinderCore.DiscoveredDroneCore> mDiscoveredDrones;
 
+    private final ProxyDeviceController mProxyController;
+    private final RemoteControl.Model model;
+
     /**
      * Constructor.
      *
@@ -67,8 +76,10 @@ public class SkyControllerDroneFinder extends PeripheralController<ProxyDeviceCo
      */
     public SkyControllerDroneFinder(@NonNull ProxyDeviceController proxyController) {
         super(proxyController);
+        mProxyController = proxyController;
         mDroneFinder = new DroneFinderCore(mComponentStore, mBackend);
         mDiscoveredDrones = new HashMap<>();
+        model = DeviceModels.rcModel(proxyController.getDevice().getModel().id());
     }
 
     @Override
@@ -78,6 +89,8 @@ public class SkyControllerDroneFinder extends PeripheralController<ProxyDeviceCo
 
     @Override
     protected void onDisconnected() {
+        wifiConnectionHandler.removeCallbacks(wifiConnectionRunnable);
+        wifiListHandler.removeCallbacks(wifiListRunnable);
         mDroneFinder.unpublish();
     }
 
@@ -86,6 +99,8 @@ public class SkyControllerDroneFinder extends PeripheralController<ProxyDeviceCo
         int featureId = command.getFeatureId();
         if (featureId == ArsdkFeatureDroneManager.UID) {
             ArsdkFeatureDroneManager.decode(command, mDroneManagerCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.WifiState.UID) {
+            ArsdkFeatureSkyctrl.WifiState.decode(command, mSkyctrlWifiStateCallbacks);
         }
     }
 
@@ -136,21 +151,102 @@ public class SkyControllerDroneFinder extends PeripheralController<ProxyDeviceCo
         }
     };
 
-    /** Backend of DroneFinderCore implementation. */
+    private Handler wifiConnectionHandler = new Handler();
+    private class WifiConnectionRunnable implements Runnable {
+        private String ssid = null;
+
+        void setSsid(final String ssid) {
+            this.ssid = ssid;
+        }
+
+        @SuppressLint("VisibleForTests")
+        @Override
+        public void run() {
+            if (mProxyController.getArsdkProxy().getActiveDevice() == null && ssid != null) {
+                mProxyController.forgetRemoteDevice(!ssid.contains("::") ? "::" + ssid : ssid);
+                ssid = null;
+            }
+        }
+    }
+    private WifiConnectionRunnable wifiConnectionRunnable = new WifiConnectionRunnable();
+
+
+    private Handler wifiListHandler = new Handler(Looper.getMainLooper());
+    private Runnable wifiListRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mDroneFinder.updateDiscoveredDrones(mDiscoveredDrones.values().toArray(
+                    new DroneFinderCore.DiscoveredDroneCore[0]))
+                    .updateState(DroneFinder.State.IDLE).notifyUpdated();
+        }
+    };
+
+    /** Callbacks called when a command of the feature ArsdkFeatureDroneManager is decoded. */
+    private final ArsdkFeatureSkyctrl.WifiState.Callback mSkyctrlWifiStateCallbacks = new ArsdkFeatureSkyctrl.WifiState.Callback() {
+
+        @Override
+        public void onConnexionChanged(String ssid, @Nullable ArsdkFeatureSkyctrl.WifistateConnexionchangedStatus status) {
+            if (status == ArsdkFeatureSkyctrl.WifistateConnexionchangedStatus.CONNECTED) {
+                wifiConnectionHandler.removeCallbacks(wifiConnectionRunnable);
+                wifiConnectionRunnable.setSsid(ssid);
+                wifiConnectionHandler.postDelayed(wifiConnectionRunnable, 15000);
+            }
+        }
+
+        @Override
+        public void onWifiList(String bssid, String ssid, int secured, int saved, int rssi, int frequency) {
+            wifiListHandler.removeCallbacks(wifiListRunnable);
+
+            final Drone.Model model;
+
+            if (ssid.toLowerCase().contains("bebop2")) {
+                model = Drone.Model.BEBOP_V2;
+            } else if (ssid.toLowerCase().contains("bebop")) {
+                model = Drone.Model.BEBOP_V1;
+            } else if (ssid.toLowerCase().contains("disco")) {
+                model = Drone.Model.DISCO;
+            } else {
+                model = Drone.Model.UNKNOWN;
+            }
+
+            final DroneFinderCore.DiscoveredDroneCore drone = new DroneFinderCore.DiscoveredDroneCore(bssid + "::" + ssid,
+                    model,
+                    ssid.trim().equals("") ? bssid : ssid,
+                    (secured == 1 ? (saved == 1 ? DroneFinder.DiscoveredDrone.ConnectionSecurity.SAVED_PASSWORD : DroneFinder.DiscoveredDrone.ConnectionSecurity.PASSWORD) : DroneFinder.DiscoveredDrone.ConnectionSecurity.NONE),
+                    rssi,
+                    saved == 1);
+            mDiscoveredDrones.put(bssid, drone);
+
+            wifiListHandler.postDelayed(wifiListRunnable, 2000);
+        }
+    };
+
+        /** Backend of DroneFinderCore implementation. */
     @SuppressWarnings("FieldCanBeLocal")
     private final DroneFinderCore.Backend mBackend = new DroneFinderCore.Backend() {
 
         @Override
         public void discoverDrones() {
-            sendCommand(ArsdkFeatureDroneManager.encodeDiscoverDrones());
+            if (model == RemoteControl.Model.SKY_CONTROLLER) {
+                mDiscoveredDrones.clear();
+                sendCommand(ArsdkFeatureSkyctrl.Wifi.encodeRequestWifiList());
+            } else {
+                sendCommand(ArsdkFeatureDroneManager.encodeDiscoverDrones());
+            }
             mDroneFinder.updateState(DroneFinder.State.SCANNING).notifyUpdated();
         }
 
         @Override
         public boolean connectDrone(@NonNull String uid, @Nullable String password) {
-            DroneFinderCore.DiscoveredDroneCore drone = mDiscoveredDrones.get(uid);
-            return drone != null && mDeviceController.connectDiscoveredDevice(
-                    drone.getUid(), drone.getModel(), drone.getName(), password);
+            if (model == RemoteControl.Model.SKY_CONTROLLER) {
+                final String[] ids = uid.split("::");
+                return sendCommand(ArsdkFeatureSkyctrl.Wifi.encodeConnectToWifi(ids[0], ids[1], password == null ? "" : password));
+            } else {
+                DroneFinderCore.DiscoveredDroneCore drone = mDiscoveredDrones.get(uid);
+
+                return drone != null && mDeviceController.connectDiscoveredDevice(
+                        drone.getUid(), drone.getModel(), drone.getName(), password);
+            }
         }
     };
 }

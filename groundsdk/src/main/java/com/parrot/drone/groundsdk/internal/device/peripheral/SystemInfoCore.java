@@ -32,13 +32,13 @@
 
 package com.parrot.drone.groundsdk.internal.device.peripheral;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.device.peripheral.Peripheral;
 import com.parrot.drone.groundsdk.device.peripheral.SystemInfo;
 import com.parrot.drone.groundsdk.internal.component.ComponentDescriptor;
 import com.parrot.drone.groundsdk.internal.component.ComponentStore;
 import com.parrot.drone.groundsdk.internal.component.SingletonComponentCore;
+
+import androidx.annotation.NonNull;
 
 /** Core class for SystemInfo. */
 public class SystemInfoCore extends SingletonComponentCore implements SystemInfo {
@@ -62,6 +62,8 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
          * @return {@code true} if the operation could be initiated, otherwise {@code false}
          */
         boolean resetSettings();
+
+        void reboot();
     }
 
     /** Engine peripheral backend. */
@@ -87,9 +89,31 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
     @NonNull
     private String mCpuId;
 
+    @NonNull
+    private String mP7Id;
+
     /** Device board identifier. */
     @NonNull
     private String mBoardId;
+
+    @NonNull
+    private String controllerARCommandsVersion;
+
+    @NonNull
+    private String skyControllerARCommandsVersion;
+
+    @NonNull
+    private String deviceARCommandsVersion;
+
+    @NonNull
+    private String gpsSoftwareVersion;
+
+    @NonNull
+    private String gpsHardwareVersion;
+
+    @NonNull
+    private SkyControllerVariant skyControllerVariant;
+
 
     /** {@code true} when a factory reset is in progress. */
     private boolean mOngoingFactoryReset;
@@ -110,7 +134,14 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
         mHardwareVersion = "";
         mFirmwareVersion = "";
         mCpuId = "";
+        mP7Id = "";
         mBoardId = "";
+        controllerARCommandsVersion = "";
+        skyControllerARCommandsVersion = "";
+        deviceARCommandsVersion = "";
+        gpsSoftwareVersion = "";
+        gpsHardwareVersion = "";
+        skyControllerVariant = SkyControllerVariant.NOT_APPLICABLE;
     }
 
     @Override
@@ -144,8 +175,48 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
 
     @NonNull
     @Override
+    public String getP7Identifier() {
+        return mP7Id;
+    }
+
+    @NonNull
+    @Override
     public String getBoardIdentifier() {
         return mBoardId;
+    }
+
+    @NonNull
+    public String getControllerARCommandsVersion() {
+        return controllerARCommandsVersion;
+    }
+
+    @NonNull
+    public String getSkyControllerARCommandsVersion() {
+        return skyControllerARCommandsVersion;
+    }
+
+    @NonNull
+    public String getDeviceARCommandsVersion() {
+        return deviceARCommandsVersion;
+    }
+
+    @NonNull
+    @Override
+    public String getGpsSoftwareVersion() {
+        return gpsSoftwareVersion;
+    }
+
+    @NonNull
+    @Override
+    public String getGpsHardwareVersion() {
+        return gpsHardwareVersion;
+    }
+
+
+    @NonNull
+    @Override
+    public SkyControllerVariant getSkyControllerVariant() {
+        return skyControllerVariant;
     }
 
     @Override
@@ -178,6 +249,11 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
             notifyUpdated();
         }
         return inProgress;
+    }
+
+    @Override
+    public void reboot() {
+        mBackend.reboot();
     }
 
     /**
@@ -255,6 +331,14 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
         return this;
     }
 
+    public final SystemInfoCore updateP7Id(@NonNull String p7Id) {
+        if (!p7Id.equals(mP7Id)) {
+            mP7Id = p7Id;
+            mChanged = true;
+        }
+        return this;
+    }
+
     /**
      * Updates the device board identifier.
      *
@@ -265,6 +349,54 @@ public class SystemInfoCore extends SingletonComponentCore implements SystemInfo
     public final SystemInfoCore updateBoardId(@NonNull String boardId) {
         if (!boardId.equals(mBoardId)) {
             mBoardId = boardId;
+            mChanged = true;
+        }
+        return this;
+    }
+
+    public final SystemInfoCore updateControllerARCommandsVersion(@NonNull String version) {
+        if (!controllerARCommandsVersion.equals(version)) {
+            controllerARCommandsVersion = version;
+            mChanged = true;
+        }
+        return this;
+    }
+
+    public final SystemInfoCore updateSkyControllerARCommandsVersion(@NonNull String version) {
+        if (!skyControllerARCommandsVersion.equals(version)) {
+            skyControllerARCommandsVersion = version;
+            mChanged = true;
+        }
+        return this;
+    }
+
+    public final SystemInfoCore updateDeviceARCommandsVersion(@NonNull String version) {
+        if (!deviceARCommandsVersion.equals(version)) {
+            deviceARCommandsVersion = version;
+            mChanged = true;
+        }
+        return this;
+    }
+
+    public final SystemInfoCore updateGpsSoftwareVersion(@NonNull String version) {
+        if (!gpsSoftwareVersion.equals(version)) {
+            gpsSoftwareVersion = version;
+            mChanged = true;
+        }
+        return this;
+    }
+
+    public final SystemInfoCore updateGpsHardwareVersion(@NonNull String version) {
+        if (!gpsHardwareVersion.equals(version)) {
+            gpsHardwareVersion = version;
+            mChanged = true;
+        }
+        return this;
+    }
+
+    public final SystemInfoCore updateSkyControllerVariant(@NonNull SkyControllerVariant variant) {
+        if (!skyControllerVariant.equals(variant)) {
+            skyControllerVariant = variant;
             mChanged = true;
         }
         return this;

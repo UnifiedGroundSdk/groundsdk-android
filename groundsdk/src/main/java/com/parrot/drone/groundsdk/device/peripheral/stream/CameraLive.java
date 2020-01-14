@@ -32,11 +32,11 @@
 
 package com.parrot.drone.groundsdk.device.peripheral.stream;
 
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.peripheral.StreamServer;
 import com.parrot.drone.groundsdk.stream.Stream;
+
+import androidx.annotation.NonNull;
 
 /**
  * Camera live stream control interface.

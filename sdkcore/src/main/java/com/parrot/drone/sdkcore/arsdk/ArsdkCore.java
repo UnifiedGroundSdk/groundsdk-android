@@ -33,10 +33,8 @@
 package com.parrot.drone.sdkcore.arsdk;
 
 import android.graphics.Rect;
+import android.util.Log;
 import android.util.SparseArray;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.parrot.drone.sdkcore.SdkCore;
 import com.parrot.drone.sdkcore.arsdk.backend.ArsdkBackendController;
@@ -47,6 +45,9 @@ import com.parrot.drone.sdkcore.ulog.ULog;
 
 import java.io.PrintWriter;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.sdkcore.arsdk.Logging.TAG;
 
@@ -115,6 +116,7 @@ public class ArsdkCore {
      * @param level requested level
      */
     public static void setCommandLogLevel(@ArsdkCommand.LogLevel int level) {
+        Log.i("arsdk", "ArsdkCommand.LogLevel set to: " + (level == 0 ? "LOG_LEVEL_NONE" : level == 1 ? "LOG_LEVEL_ACKNOWLEDGED_WITHOUT_FREQUENT" : level == 2 ? "LOG_LEVEL_ACKNOWLEDGED" : "LOG_LEVEL_ALL"));
         nativeSetCommandLogLevel(level);
     }
 

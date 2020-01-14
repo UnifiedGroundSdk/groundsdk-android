@@ -10,3 +10,6 @@
 
 # Mac junk
 .DS_Store
+
+# build directories
+build/

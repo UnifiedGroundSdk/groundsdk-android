@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.devicecontroller;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.ArsdkEngine;
 import com.parrot.drone.groundsdk.arsdkengine.DeviceProvider;
 import com.parrot.drone.groundsdk.arsdkengine.blackbox.BlackBoxDroneSession;
@@ -60,6 +57,9 @@ import com.parrot.drone.sdkcore.ulog.ULog;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_CTRL;
 

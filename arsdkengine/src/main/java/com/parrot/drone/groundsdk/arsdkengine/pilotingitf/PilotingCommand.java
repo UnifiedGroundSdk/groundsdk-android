@@ -32,13 +32,14 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.pilotingitf;
 
-import androidx.annotation.CallSuper;
-import androidx.annotation.NonNull;
-
 import com.parrot.drone.sdkcore.TimeProvider;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
+import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureMinidrone;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkNoAckCmdEncoder;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
 
 /**
  * A generic piloting command that may be encoded into various specific piloting ArsdkCommands.
@@ -47,6 +48,9 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkNoAckCmdEncoder;
  * loop that runs in the pomp loop thread.
  */
 public final class PilotingCommand {
+
+    /** Piloting HoverLock feature */
+    private boolean mWithHoverLock = false;
 
     /** Piloting command common roll value. */
     private volatile int mRoll;
@@ -60,13 +64,20 @@ public final class PilotingCommand {
     /** Piloting command common gaz value. */
     private volatile int mGaz;
 
+    /** Piloting command common flag value. */
+    private volatile boolean mFlag;
+
     /**
      * Retrieves the current flag value.
      *
      * @return flag value
      */
     public int getFlag() {
-        return mRoll == 0 && mPitch == 0 ? 0 : 1;
+        if (mWithHoverLock) {
+            return mFlag ? 1 : 0;
+        } else {
+            return mRoll == 0 && mPitch == 0 ? 0 : 1;
+        }
     }
 
     /**
@@ -132,6 +143,22 @@ public final class PilotingCommand {
         }
 
         /**
+         * Enables or disables the hoverlock feature (defaults to disabled)
+         *
+         * @param withHoverLock hoverlock value to set
+         *
+         * @return {@code true} if setting this value changed the piloting command, otherwise {@code false}
+         */
+        public boolean setWithHoverLock(boolean withHoverLock) {
+            if (mPCmd.mWithHoverLock == withHoverLock) {
+                return false;
+            } else {
+                mPCmd.mWithHoverLock = withHoverLock;
+                return true;
+            }
+        }
+
+        /**
          * Updates the current piloting command roll value.
          *
          * @param roll roll value to set
@@ -191,6 +218,14 @@ public final class PilotingCommand {
             return true;
         }
 
+        public final boolean setFlag(boolean flag) {
+            if (mPCmd.mFlag == flag) {
+                return false;
+            }
+            mPCmd.mFlag = flag;
+            return true;
+        }
+
         /**
          * Retrieves the period at which piloting command should be encoded.
          *
@@ -204,6 +239,7 @@ public final class PilotingCommand {
         @CallSuper
         public void reset() {
             mPCmd.mRoll = mPCmd.mPitch = mPCmd.mGaz = mPCmd.mYaw = 0;
+            mPCmd.mFlag = false;
         }
 
         /**
@@ -232,7 +268,79 @@ public final class PilotingCommand {
             public ArsdkCommand encodeNoAckCmd() {
                 // negate pitch: positive pitch from the drone POV means tilted towards ground (i.e. forward move),
                 // negative pitch means tilted towards sky (i.e. backward move)
+//                Log.i("bla", String.format(Locale.US, "flag=%d roll=%d pitch=%d yaw=%d gaz=%d", mPCmd.getFlag(), mPCmd.mRoll, -mPCmd.mPitch, mPCmd.mYaw, mPCmd.mGaz));
+                return ArsdkFeatureArdrone3.Piloting.encodePCMD(mPCmd.getFlag(), mPCmd.mRoll, -mPCmd.mPitch, mPCmd.mYaw, mPCmd.mGaz, nextSequenceNumber());
+            }
+
+            /**
+             * Generates subsequent piloting command sequence number and timestamp.
+             *
+             * @return sequence number to use to encode next command
+             */
+            private int nextSequenceNumber() {
+                mSeqNr = (++mSeqNr) & 0xFF;
+                return (mSeqNr << 24) + (int) TimeProvider.elapsedRealtime();
+            }
+        }
+
+        public static final class Bebop extends Encoder {
+
+            /** Sequence number seed. */
+            private int mSeqNr;
+
+            @Override
+            public int getPilotingCommandLoopPeriod() {
+                return 50;
+            }
+
+            @Override
+            public void reset() {
+                super.reset();
+                mSeqNr = 0;
+            }
+
+            @NonNull
+            @Override
+            public ArsdkCommand encodeNoAckCmd() {
+                // negate pitch: positive pitch from the drone POV means tilted towards ground (i.e. forward move),
+                // negative pitch means tilted towards sky (i.e. backward move)
                 return ArsdkFeatureArdrone3.Piloting.encodePCMD(mPCmd.getFlag(), mPCmd.mRoll, -mPCmd.mPitch, mPCmd.mYaw,
+                        mPCmd.mGaz, nextSequenceNumber());
+            }
+
+            /**
+             * Generates subsequent piloting command sequence number and timestamp.
+             *
+             * @return sequence number to use to encode next command
+             */
+            private int nextSequenceNumber() {
+                mSeqNr = (++mSeqNr) & 0xFF;
+                return (mSeqNr << 24) + (int) TimeProvider.elapsedRealtime();
+            }
+        }
+
+        public static final class Mambo extends Encoder {
+
+            /** Sequence number seed. */
+            private int mSeqNr;
+
+            @Override
+            public int getPilotingCommandLoopPeriod() {
+                return 50;
+            }
+
+            @Override
+            public void reset() {
+                super.reset();
+                mSeqNr = 0;
+            }
+
+            @NonNull
+            @Override
+            public ArsdkCommand encodeNoAckCmd() {
+                // negate pitch: positive pitch from the drone POV means tilted towards ground (i.e. forward move),
+                // negative pitch means tilted towards sky (i.e. backward move)
+                return ArsdkFeatureMinidrone.Piloting.encodePCMD(mPCmd.getFlag(), mPCmd.mRoll, -mPCmd.mPitch, mPCmd.mYaw,
                         mPCmd.mGaz, nextSequenceNumber());
             }
 
