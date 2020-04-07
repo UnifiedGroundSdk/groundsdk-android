@@ -28,6 +28,8 @@ dependencies {
 
     implementation androidXAnnotations
 
+    implementation 'com.google.firebase:firebase-crashlytics:17.0.0-beta01'
+
 //    androidTestImplementation project(':sdkcore-testing')
 //    androidTestImplementation androidXTestCore
 //    androidTestImplementation(androidXTestRunner) {

@@ -34,9 +34,7 @@ package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.wifi;
 
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.DronePeripheralController;
 import com.parrot.drone.groundsdk.device.peripheral.WifiAccessPoint;
@@ -60,6 +58,9 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_WIFI;
 
@@ -112,6 +113,8 @@ public class AnafiWifiAccessPoint extends DronePeripheralController {
     /** {@code true} when the access point is in automatic country selection mode, otherwise {@code false}. */
     private boolean mAutoCountry;
 
+    private final FirebaseCrashlytics crashlytics;
+
     /**
      * Constructor.
      *
@@ -125,6 +128,8 @@ public class AnafiWifiAccessPoint extends DronePeripheralController {
         mOutdoorChannels = EnumSet.noneOf(Channel.class);
         mIndoorChannels = EnumSet.noneOf(Channel.class);
         mAvailableCodes = new HashSet<>();
+
+        crashlytics = FirebaseCrashlytics.getInstance();
     }
 
     @Override
@@ -340,8 +345,11 @@ public class AnafiWifiAccessPoint extends DronePeripheralController {
                 ULog.d(TAG_WIFI, "onCountryChanged [selectionMode: " + selectionMode + ", code: " + code + "]");
             }
 
+            crashlytics.log("onCountryChanged=" + code);
+
             mCountryCode = code;
-            mAutoCountry = selectionMode == ArsdkFeatureWifi.CountrySelection.AUTO;
+//            mAutoCountry = selectionMode == ArsdkFeatureWifi.CountrySelection.AUTO;
+            mAutoCountry = false;
 
             sendCommand(ArsdkFeatureWifi.encodeUpdateAuthorizedChannels());
 
@@ -455,6 +463,9 @@ public class AnafiWifiAccessPoint extends DronePeripheralController {
 
         @Override
         public boolean setCountry(@NonNull String code) {
+
+            crashlytics.log("setCountry=" + code);
+
             sendCommand(ArsdkFeatureWifi.encodeSetCountry(ArsdkFeatureWifi.CountrySelection.MANUAL, code));
             return true;
         }

@@ -125,7 +125,7 @@
          - the wifi country setting is changed each time a new country is detected from the current location, and it
          cannot be changed from the API
          - the environment is forced to outdoor, and it cannot be changed from the API. -->
-    <bool name="gsdk_auto_select_wifi_country">true</bool>
+    <bool name="gsdk_auto_select_wifi_country">false</bool>
 
     <!-- tells whether the geocoder engine should be loaded or not -->
     <bool name="gsdk_geocoder_enabled">false</bool>

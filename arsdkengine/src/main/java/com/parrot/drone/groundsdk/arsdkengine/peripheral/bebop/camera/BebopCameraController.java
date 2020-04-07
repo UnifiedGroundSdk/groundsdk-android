@@ -90,8 +90,13 @@ public final class BebopCameraController extends DronePeripheralController {
         mCameraCore.autoRecord().updateSupportedFlag(true);
         mCameraCore.autoHdr().updateSupportedFlag(false);
 
+        mCameraCore.style().updateSupportedStyles(EnumSet.noneOf(CameraStyle.Style.class));
         mCameraCore.style().updateSupportedStyles(EnumSet.of(CameraStyle.Style.STANDARD));
         mCameraCore.style().updateStyle(CameraStyle.Style.STANDARD);
+
+        mCameraCore.style().saturation().updateBounds(IntegerRange.of(0,0));
+        mCameraCore.style().contrast().updateBounds(IntegerRange.of(0,0));
+        mCameraCore.style().sharpness().updateBounds(IntegerRange.of(0,0));
 
         mCameraCore.createAlignmentIfNeeded().updateSupportedPitchRange(DoubleRange.of(0, 0));
         mCameraCore.createAlignmentIfNeeded().updateSupportedRollRange(mCameraCore.createAlignmentIfNeeded().supportedPitchRange());
@@ -111,6 +116,7 @@ public final class BebopCameraController extends DronePeripheralController {
         mCameraCore.whiteBalance().updateSupportedModes(whiteBalanceModes);
         mCameraCore.whiteBalance().updateSupportedTemperatures(EnumSet.noneOf(CameraWhiteBalance.Temperature.class));
 
+        mCameraCore.exposureCompensation().updateAvailableValues(EnumSet.noneOf(CameraEvCompensation.class));
         mCameraCore.exposureCompensation().updateAvailableValues(EnumSet.allOf(CameraEvCompensation.class));
 
         final CameraRecordingSettingCore recording =  mCameraCore.recording();
