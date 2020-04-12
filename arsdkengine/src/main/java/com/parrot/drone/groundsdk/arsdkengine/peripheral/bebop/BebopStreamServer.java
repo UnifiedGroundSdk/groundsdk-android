@@ -146,7 +146,7 @@ public class BebopStreamServer extends DronePeripheralController {
                 @Override
                 public void onVideoStreamModeChanged(@Nullable ArsdkFeatureArdrone3.MediastreamingstateVideostreammodechangedMode mode) {
                     if (mode != null) {
-                        mStreamController.legacyStreamingMode = ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode.fromValue(mode.value);
+                        mStreamController.updateLegacyStreamingMode(ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode.fromValue(mode.value));
                         mStreamController.notifyUpdated();
                     }
                 }

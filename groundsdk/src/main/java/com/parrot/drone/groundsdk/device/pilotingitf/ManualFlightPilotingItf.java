@@ -305,4 +305,23 @@ public interface ManualFlightPilotingItf extends PilotingItf, Activable {
      */
     @NonNull
     OptionalBooleanSetting getThrownTakeOffMode();
+
+
+    /**
+     * Gets the current protective hull state.
+     * <p>
+     * If available, allow for pre-programmed flight characteristics with or
+     * without prtoective hull installed
+     *
+     * @return the protective hull installed flag
+     */
+    @NonNull
+    OptionalBooleanSetting getProtectiveHull();
+
+    /**
+     * Requests a flat trim
+     */
+    void flatTrim();
+
+    boolean isFlatTrimmed();
 }

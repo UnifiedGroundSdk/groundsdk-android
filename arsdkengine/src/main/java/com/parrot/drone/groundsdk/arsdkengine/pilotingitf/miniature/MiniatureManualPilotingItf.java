@@ -525,6 +525,11 @@ public class MiniatureManualPilotingItf extends ActivablePilotingItfController {
             new ArsdkFeatureMinidrone.PilotingState.Callback() {
 
                 @Override
+                public void onFlatTrimChanged() {
+                    mPilotingItf.updateIsFlatTrimmed();
+                }
+
+                @Override
                 public void onFlyingStateChanged(@Nullable ArsdkFeatureMinidrone.PilotingstateFlyingstatechangedState state) {
                     if (state != null) {
                         switch (state) {
@@ -734,6 +739,16 @@ public class MiniatureManualPilotingItf extends ActivablePilotingItfController {
         public void hover() {
             MiniatureManualPilotingItf.this.setPitch(0);
             MiniatureManualPilotingItf.this.setRoll(0);
+        }
+
+        @Override
+        public boolean setProtectiveHull(boolean enable) {
+            return false;
+        }
+
+        @Override
+        public void flatTrim() {
+            sendCommand(ArsdkFeatureMinidrone.Piloting.encodeFlatTrim());
         }
     }
 }

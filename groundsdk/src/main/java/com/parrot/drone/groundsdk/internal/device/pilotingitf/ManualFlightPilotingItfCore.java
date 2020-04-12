@@ -177,6 +177,16 @@ public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore 
          * Asks the drone to hover.
          */
         void hover();
+
+        /**
+         *  Sets the protective hull enabled flag for Bebop drones
+         */
+        boolean setProtectiveHull(boolean enable);
+
+        /**
+         * Executes a flat trim
+         */
+        void flatTrim();
     }
 
     /** Backend of this interface. */
@@ -233,6 +243,11 @@ public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore 
     // local copy of the HoverLock feature flag
     private boolean mWithHoverLock = false;
 
+    // local copy of protective hull flag
+    private OptionalBooleanSettingCore mProtectiveHull;
+
+    private boolean mFlatTrimmed;
+
     /**
      * Constructor.
      *
@@ -256,6 +271,8 @@ public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore 
                 mBackend::setBankedTurnMode);
         mThrownTakeOffSetting = new OptionalBooleanSettingCore(new SettingController(this::onSettingChange),
                 mBackend::useThrownTakeOffForSmartTakeOff);
+        mProtectiveHull = new OptionalBooleanSettingCore(new SettingController(this::onSettingChange),
+                mBackend::setProtectiveHull);
     }
 
     @Override
@@ -406,6 +423,28 @@ public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore 
         return mThrownTakeOffSetting;
     }
 
+    @NonNull
+    @Override
+    public OptionalBooleanSettingCore getProtectiveHull() {
+        return mProtectiveHull;
+    }
+
+    @Override
+    public void flatTrim() {
+        mBackend.flatTrim();
+    }
+
+    @Override
+    public boolean isFlatTrimmed() {
+        return mFlatTrimmed;
+    }
+
+    public void updateIsFlatTrimmed() {
+        mFlatTrimmed = true;
+        mChanged = true;
+        notifyUpdated();
+    }
+
     /**
      * Updates the ability to land.
      *
@@ -474,6 +513,7 @@ public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore 
         mMaxYawSpeedSetting.cancelRollback();
         mBankedTurnSetting.cancelRollback();
         mThrownTakeOffSetting.cancelRollback();
+        mProtectiveHull.cancelRollback();
         return this;
     }
 

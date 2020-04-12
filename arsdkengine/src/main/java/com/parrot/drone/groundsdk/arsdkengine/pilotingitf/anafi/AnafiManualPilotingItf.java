@@ -99,6 +99,9 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
     private static final StorageEntry<Boolean> THROWN_TAKE_OFF_MODE_SUPPORT_SETTING =
             StorageEntry.ofBoolean("thrownTakeOffModeSupport");
 
+    /** protective hull entry. */
+    private static final StorageEntry<Boolean> PROTECTIVE_HULL_SETTING = StorageEntry.ofBoolean("protectiveHull");
+
 
     /** Piloting interface for which this object is the backend. */
     @NonNull
@@ -135,6 +138,9 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
     /** Thrown take-off mode. */
     @Nullable
     private Boolean mThrownTakeOffMode;
+
+    @Nullable
+    private Boolean mProtectiveHull;
 
     /**
      * Constructor.
@@ -270,6 +276,9 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         mPilotingItf.getThrownTakeOffMode().updateSupportedFlag(
                 Boolean.TRUE.equals(THROWN_TAKE_OFF_MODE_SUPPORT_SETTING.load(mDeviceDict)));
 
+        mPilotingItf.getProtectiveHull().updateSupportedFlag(
+                Boolean.TRUE.equals(PROTECTIVE_HULL_SETTING.load(mDeviceDict)));
+
         applyPresets();
     }
 
@@ -283,6 +292,7 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         applyMaxYawRotationSpeed(MAX_YAW_ROTATION_SPEED_PRESET.load(mPresetDict));
         applyBankedTurnMode(BANKED_TURN_MODE_PRESET.load(mPresetDict));
         applyThrownTakeOffMode(THROWN_TAKEOFF_MODE_PRESET.load(mPresetDict));
+        applyProtectiveHullMode(PROTECTIVE_HULL_SETTING.load(mPresetDict));
     }
 
     /**
@@ -471,6 +481,37 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         return updating;
     }
 
+    /**
+     * Applies protective hull setting.
+     * <ul>
+     * <li>Finds an appropriate fallback value if the given value is null, or unsupported;</li>
+     * <li>Sends the computed value to the drone in case it differs from the last received value;</li>
+     * <li>Updates the component's setting accordingly.</li>
+     * </ul>
+     *
+     * @param protectiveHull value to apply
+     *
+     * @return {@code true} if a command was sent to the device and the component's setting should arm its updating
+     *         flag
+     */
+    private boolean applyProtectiveHullMode(@Nullable Boolean protectiveHull) {
+        if (protectiveHull== null) {
+            if (mProtectiveHull == null) {
+                return false;
+            }
+            protectiveHull= mProtectiveHull;
+        }
+
+        boolean updating = !protectiveHull.equals(mProtectiveHull) && sendCommand(
+                ArsdkFeatureArdrone3.SpeedSettings.encodeHullProtection(protectiveHull ? 1 : 0));
+
+        mProtectiveHull = protectiveHull;
+        mPilotingItf.getProtectiveHull()
+                .updateValue(protectiveHull);
+
+        return updating;
+    }
+
     /** Callbacks called when a command of the feature ArsdkFeatureArdrone3.PilotingSettingsState is decoded. */
     private final ArsdkFeatureArdrone3.PilotingSettingsState.Callback mPilotingSettingsStateCallback =
             new ArsdkFeatureArdrone3.PilotingSettingsState.Callback() {
@@ -525,6 +566,11 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
     /** Callbacks called when a command of the feature ArsdkFeatureArdrone3.PilotingState is decoded. */
     private final ArsdkFeatureArdrone3.PilotingState.Callback mPilotingStateCallback =
             new ArsdkFeatureArdrone3.PilotingState.Callback() {
+
+                @Override
+                public void onFlatTrimChanged() {
+                    mPilotingItf.updateIsFlatTrimmed();
+                }
 
                 @Override
                 public void onFlyingStateChanged(
@@ -619,6 +665,19 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
                     mMaxPitchRollVelocity = (double) current;
                     if (isConnected()) {
                         mPilotingItf.getMaxPitchRollVelocity().updateValue(mMaxPitchRollVelocity);
+                    }
+
+                    mPilotingItf.notifyUpdated();
+                }
+
+                @Override
+                public void onHullProtectionChanged(int present) {
+                    PROTECTIVE_HULL_SETTING.save(mDeviceDict, true);
+                    mPilotingItf.getProtectiveHull().updateSupportedFlag(true);
+
+                    mProtectiveHull = present == 1;
+                    if (isConnected()) {
+                        mPilotingItf.getProtectiveHull().updateValue(mProtectiveHull);
                     }
 
                     mPilotingItf.notifyUpdated();
@@ -747,6 +806,21 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         public void hover() {
             AnafiManualPilotingItf.this.setPitch(0);
             AnafiManualPilotingItf.this.setRoll(0);
+        }
+
+        @Override
+        public boolean setProtectiveHull(boolean enable) {
+            boolean updating = applyProtectiveHullMode(enable);
+            PROTECTIVE_HULL_SETTING.save(mPresetDict, enable);
+            if (!updating) {
+                mPilotingItf.notifyUpdated();
+            }
+            return updating;
+        }
+
+        @Override
+        public void flatTrim() {
+            sendCommand(ArsdkFeatureArdrone3.Piloting.encodeFlatTrim());
         }
     }
 }

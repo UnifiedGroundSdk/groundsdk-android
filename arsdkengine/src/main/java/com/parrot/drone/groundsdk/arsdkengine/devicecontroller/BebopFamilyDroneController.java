@@ -56,6 +56,7 @@ import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.AnafiTargetTracke
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.wifi.AnafiWifiAccessPoint;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.BebopRemovableUserStorage;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.BebopStreamServer;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.DiscoPitot;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.camera.BebopAntiFlicker;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.camera.BebopCameraController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.gimbal.BebopGimbal;
@@ -126,6 +127,7 @@ public class BebopFamilyDroneController extends DroneController {
                 new AnafiPhotoProgressIndicator(this),
                 // peripherals
                 new AnafiMagnetometer(this),
+                new DiscoPitot(this),
                 new AnafiSystemInfo(this),
                 new AnafiBeeper(this),
                 new AnafiMotors(this),

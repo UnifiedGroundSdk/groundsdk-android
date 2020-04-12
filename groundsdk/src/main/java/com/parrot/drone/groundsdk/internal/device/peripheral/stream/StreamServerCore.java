@@ -123,7 +123,7 @@ public final class StreamServerCore extends ComponentCore {
     @Nullable
     private CameraLiveCore mCameraLive;
 
-    public ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode legacyStreamingMode;
+    private ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode legacyStreamingMode;
 
     /**
      * Constructor.
@@ -195,6 +195,11 @@ public final class StreamServerCore extends ComponentCore {
         return mStreamingEnabled;
     }
 
+
+    public void updateLegacyStreamingMode(ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode mode) {
+        legacyStreamingMode = mode;
+        mChanged = true;
+    }
 
     void setLegacyStreamingMode(ArsdkFeatureArdrone3.MediastreamingVideostreammodeMode mode) {
         if (mode != legacyStreamingMode) {
