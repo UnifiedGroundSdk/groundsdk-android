@@ -32,6 +32,7 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi;
 
+import android.util.Log;
 import android.util.SparseArray;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
@@ -147,13 +148,22 @@ public final class AnafiMotors extends DronePeripheralController {
         @Override
         public void onMotorSoftwareVersionChanged(String info) {
             if (info != null) {
+                Log.i("bla", "info=[" + info + "]");
                 final String[] data = info.split("\\.");
                 final String version = data[0] + "." + data[1];
-                final String type = data[2];
-                final int motors = Integer.valueOf(data[3]);
 
-                for (int x = 0 ; x < motors ; x++) {
-                    mCopterMotors.updateMotorDetail(CopterMotors.Motor.values()[x], type, version, version);
+                if (data.length > 2) {
+                    final String type = data[2];
+                    final int motors = Integer.parseInt(data[3]);
+
+                    for (int x = 0; x < motors; x++) {
+                        mCopterMotors.updateMotorDetail(CopterMotors.Motor.values()[x], type, version, version);
+                    }
+                } else {
+                    for (int x = 0; x < 4; x++) {
+                        mCopterMotors.updateMotorDetail(CopterMotors.Motor.values()[x], "Release", version, version);
+                    }
+
                 }
 
                 mCopterMotors.notifyUpdated();

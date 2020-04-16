@@ -37,6 +37,7 @@ import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.PilotingItfActiva
 import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.StorageEntry;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.ActivablePilotingItfController;
+import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.internal.device.pilotingitf.ManualFlightPilotingItfCore;
 import com.parrot.drone.groundsdk.value.DoubleRange;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
@@ -157,7 +158,6 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         mPilotingItf = new ManualFlightPilotingItfCore(mComponentStore, new Backend());
 
         AnafiManualPilotingItf.this.setWithHoverLock(withHoverLock);
-
         loadPersistedData();
         if (isPersisted()) {
             mPilotingItf.publish();
@@ -291,7 +291,14 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
         applyMaxVerticalSpeed(MAX_VERTICAL_SPEED_PRESET.load(mPresetDict));
         applyMaxYawRotationSpeed(MAX_YAW_ROTATION_SPEED_PRESET.load(mPresetDict));
         applyBankedTurnMode(BANKED_TURN_MODE_PRESET.load(mPresetDict));
-        applyThrownTakeOffMode(THROWN_TAKEOFF_MODE_PRESET.load(mPresetDict));
+
+        if (mDeviceController.getDevice().getModel() == Drone.Model.DISCO) {
+            mPilotingItf.getThrownTakeOffMode().updateSupportedFlag(true);
+            applyThrownTakeOffMode(true);
+        } else {
+            applyThrownTakeOffMode(THROWN_TAKEOFF_MODE_PRESET.load(mPresetDict));
+        }
+
         applyProtectiveHullMode(PROTECTIVE_HULL_SETTING.load(mPresetDict));
     }
 

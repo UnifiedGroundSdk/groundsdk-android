@@ -298,6 +298,12 @@ public class ArsdkEngine extends EngineBase implements RcUsbAccessoryManager {
     @NonNull
     final DeviceController getOrCreateDeviceController(@NonNull String uid, @NonNull DeviceModel model,
                                                        @NonNull String name) {
+        
+        // special case for sphinx uids
+        if ("000000000000000000".equals(uid)) {
+            uid = "SPHINX-" + model.id() + "-" + name;
+        }
+
         DeviceController controller = mDeviceControllers.get(uid);
         if (controller == null) {
             controller = createDeviceController(uid, model, name);

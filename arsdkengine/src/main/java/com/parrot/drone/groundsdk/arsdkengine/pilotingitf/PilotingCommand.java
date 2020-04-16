@@ -268,7 +268,6 @@ public final class PilotingCommand {
             public ArsdkCommand encodeNoAckCmd() {
                 // negate pitch: positive pitch from the drone POV means tilted towards ground (i.e. forward move),
                 // negative pitch means tilted towards sky (i.e. backward move)
-//                Log.i("bla", String.format(Locale.US, "flag=%d roll=%d pitch=%d yaw=%d gaz=%d", mPCmd.getFlag(), mPCmd.mRoll, -mPCmd.mPitch, mPCmd.mYaw, mPCmd.mGaz));
                 return ArsdkFeatureArdrone3.Piloting.encodePCMD(mPCmd.getFlag(), mPCmd.mRoll, -mPCmd.mPitch, mPCmd.mYaw, mPCmd.mGaz, nextSequenceNumber());
             }
 

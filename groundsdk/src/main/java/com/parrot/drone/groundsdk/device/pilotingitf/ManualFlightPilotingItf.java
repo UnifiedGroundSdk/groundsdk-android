@@ -323,5 +323,14 @@ public interface ManualFlightPilotingItf extends PilotingItf, Activable {
      */
     void flatTrim();
 
+    /**
+     * reset flat trim
+     */
+    void resetFlatTrim();
+
+    /**
+     * flat trim indicator
+     * @return
+     */
     boolean isFlatTrimmed();
 }

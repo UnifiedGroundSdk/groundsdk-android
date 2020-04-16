@@ -302,17 +302,18 @@ public class FtpSession {
     public void deleteFile(@NonNull final String remoteFile, @Nullable final FtpTransferListener listener) {
         new Thread(() -> {
             final FTPClient client = createFtpClient();
-            final SortedMap<String, FTPFile> remoteFiles = new TreeMap<>();
+//            final SortedMap<String, FTPFile> remoteFiles = new TreeMap<>();
 
             try {
                 connect(client);
 
-                if (!client.deleteFile(remoteFile) && listener != null) {
-                    new Handler(Looper.getMainLooper()).post(() -> listener.onTransferCompleted(true, remoteFiles));
+                if (listener != null) {
+                    final boolean result = client.deleteFile(remoteFile);
+                    new Handler(Looper.getMainLooper()).post(() -> listener.onTransferCompleted(result, remoteFile));
                 }
 
             } catch (Exception ex) {
-                Log.w(CLASS_NAME, "Unable to FTP LIST files: " + ex.getMessage(), ex);
+                Log.w(CLASS_NAME, "Unable to FTP DELETE files: " + ex.getMessage(), ex);
                 if (listener != null) {
                     new Handler(Looper.getMainLooper()).post(() -> listener.onTransferCompleted(false, null));
                 }

@@ -51,7 +51,6 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import com.parrot.drone.sdkcore.ulog.ULog;
 
 import java.io.File;
-import java.util.UUID;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -506,7 +505,7 @@ public class BebopFlightPlanPilotingItf extends ActivablePilotingItfController {
             final FtpSession session = mDeviceController.getFlightPlanFtpSession();
 
             if (session != null) {
-                final boolean successful = session.storeFile(flightPlan, UUID.randomUUID().toString(), new FtpSession.FtpTransferListener() {
+                final boolean successful = session.storeFile(flightPlan, "flightPlan.mavlink", new FtpSession.FtpTransferListener() {
                     @Override
                     public void onTransferCompleted(boolean successful, @Nullable Object data) {
                         onTransferComplete(successful, data);

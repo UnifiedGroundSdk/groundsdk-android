@@ -439,6 +439,11 @@ public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore 
         return mFlatTrimmed;
     }
 
+    @Override
+    public void resetFlatTrim() {
+        mFlatTrimmed = false;
+    }
+
     public void updateIsFlatTrimmed() {
         mFlatTrimmed = true;
         mChanged = true;

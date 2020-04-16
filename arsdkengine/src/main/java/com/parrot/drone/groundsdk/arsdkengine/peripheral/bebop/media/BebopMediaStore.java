@@ -36,7 +36,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.DronePeripheralController;
@@ -312,6 +311,7 @@ public final class BebopMediaStore extends DronePeripheralController {
                 ftpSession.deleteFile(media.getUid(), new FtpSession.FtpTransferListener() {
                     @Override
                     public void onTransferCompleted(boolean successful, @Nullable Object data) {
+                        if (mCachedMediaList != null) mCachedMediaList.clear();
                         new Handler(Looper.getMainLooper()).post(() -> callback.onRequestComplete(successful ? MediaRequest.Status.SUCCESS : MediaRequest.Status.FAILED));
                     }
                     @Override
@@ -383,7 +383,6 @@ public final class BebopMediaStore extends DronePeripheralController {
                     public void onTransferCompleted(boolean successful, @Nullable Object data) {
                         if (successful) {
                             final byte[] thumb = (byte[]) data;
-                            Log.i("bla", "thumb size=" + thumb.length);
                             final Bitmap thumbnail = BitmapFactory.decodeByteArray(thumb, 0, thumb.length);
                             if (thumbnail == null) {
                                 callback.onRequestComplete(MediaRequest.Status.FAILED, null);

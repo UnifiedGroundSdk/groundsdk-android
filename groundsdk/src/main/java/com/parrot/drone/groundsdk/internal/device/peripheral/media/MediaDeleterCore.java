@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.internal.device.peripheral.media;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.device.peripheral.media.MediaDeleter;
 import com.parrot.drone.groundsdk.device.peripheral.media.MediaItem;
 import com.parrot.drone.groundsdk.device.peripheral.media.MediaTaskStatus;
@@ -44,6 +41,9 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Implementation of the MediaDeleter task.
