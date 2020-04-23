@@ -53,7 +53,7 @@ import androidx.annotation.Nullable;
 public abstract class MavlinkCommand {
 
     /** MAVLink command type. */
-    enum Type {
+    public enum Type {
 
         /** Navigate to waypoint. */
         NAVIGATE_TO_WAYPOINT(16),
@@ -201,6 +201,10 @@ public abstract class MavlinkCommand {
         writer.write(String.format(Locale.US, "%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\n",
                 index, CURRENT_WAYPOINT, FRAME, mType.code(), param1, param2, param3, param4, latitude,
                 longitude, altitude, AUTO_CONTINUE));
+    }
+
+    public Type getType() {
+        return mType;
     }
 
     /**

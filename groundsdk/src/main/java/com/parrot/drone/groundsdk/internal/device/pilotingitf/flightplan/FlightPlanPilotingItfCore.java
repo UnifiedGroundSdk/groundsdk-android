@@ -32,8 +32,6 @@
 
 package com.parrot.drone.groundsdk.internal.device.pilotingitf.flightplan;
 
-import com.parrot.arsdk.armavlink.MAV_CMD;
-import com.parrot.arsdk.armavlink.MissionItem;
 import com.parrot.drone.groundsdk.device.pilotingitf.FlightPlanPilotingItf;
 import com.parrot.drone.groundsdk.device.pilotingitf.PilotingItf;
 import com.parrot.drone.groundsdk.internal.component.ComponentDescriptor;
@@ -41,15 +39,11 @@ import com.parrot.drone.groundsdk.internal.component.ComponentStore;
 import com.parrot.drone.groundsdk.internal.device.pilotingitf.ActivablePilotingItfCore;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 
 import androidx.annotation.NonNull;
-
-import static com.parrot.drone.groundsdk.Reversed.reversed;
 
 /**
  * Core class for FlightPlanPilotingItf.
@@ -115,12 +109,6 @@ public class FlightPlanPilotingItfCore extends ActivablePilotingItfCore implemen
 
     /** Latest mission item executed index. */
     private int mMissionItemExecuted;
-
-    /** Latest ARMavlinkMissionItemList uploaded to the drone */
-    private List<MissionItem> mMissionItemList;
-
-    /** latest waypoint executed (reached +1) */
-    private int mWaypointExecuted = 0;
 
     /** Return Home on Disconnect Setting. */
     @NonNull
@@ -190,36 +178,6 @@ public class FlightPlanPilotingItfCore extends ActivablePilotingItfCore implemen
     @Override
     public int getLatestMissionItemExecuted() {
         return mMissionItemExecuted;
-    }
-
-    @Override
-    public void setMissionItemList(ArrayList<MissionItem> missionItemList) {
-        mMissionItemList = missionItemList;
-        mWaypointExecuted = -1;
-    }
-
-    public int getLatestWaypointExecuted() {
-        if (mMissionItemList != null && mMissionItemExecuted != -1) {
-            int waypoint = 0;
-
-            for (MissionItem missionItem : reversed(mMissionItemList)) {
-                if (missionItem.getId() > mMissionItemExecuted) continue;
-
-                if (missionItem.getCommand() == MAV_CMD.MAV_CMD_NAV_WAYPOINT.getId() && missionItem.getParam3() != 0) {
-                    waypoint = Math.round(missionItem.getParam3());
-                    break;
-                }
-
-                if (missionItem.getCommand() == MAV_CMD.MAV_CMD_DO_CHANGE_SPEED.getId() && missionItem.getParam3() != 0) {
-                    waypoint = Math.round(missionItem.getParam3());
-                    break;
-                }
-            }
-
-            return waypoint;
-        } else {
-            return -1;
-        }
     }
 
     @NonNull

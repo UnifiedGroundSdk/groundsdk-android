@@ -14,7 +14,7 @@ android {
 
 dependencies {
     implementation project(':sdkcore')
-    implementation project(path: ':libARMavlink')
+//    implementation project(path: ':libARMavlink')
 
     implementation androidXLocalBroadcastManager
 
