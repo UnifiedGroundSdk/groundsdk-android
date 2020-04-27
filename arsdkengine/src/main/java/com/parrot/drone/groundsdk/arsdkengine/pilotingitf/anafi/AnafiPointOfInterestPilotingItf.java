@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.pilotingitf.anafi;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.PilotingItfActivationController;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.ActivablePilotingItfController;
 import com.parrot.drone.groundsdk.device.pilotingitf.PointOfInterestPilotingItf;
@@ -45,6 +42,9 @@ import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3.Piloting;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import com.parrot.drone.sdkcore.ulog.ULog;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG;
 
@@ -339,18 +339,26 @@ public class AnafiPointOfInterestPilotingItf extends ActivablePilotingItfControl
             }
         }
 
+        int pitch = 0;
+        int roll = 0;
+
         @Override
         public void setPitch(int pitch) {
+            this.pitch = pitch;
+            setFlag(pitch != 0 || roll != 0);
             AnafiPointOfInterestPilotingItf.this.setPitch(pitch);
         }
 
         @Override
         public void setRoll(int roll) {
+            this.roll = roll;
+            setFlag(pitch != 0 || roll != 0);
             AnafiPointOfInterestPilotingItf.this.setRoll(roll);
         }
 
         @Override
         public void setVerticalSpeed(int verticalSpeed) {
+            setFlag(pitch != 0 || roll != 0);
             setGaz(verticalSpeed);
         }
     }

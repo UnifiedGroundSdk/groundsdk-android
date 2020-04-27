@@ -32,14 +32,14 @@
 
 package com.parrot.drone.groundsdk.internal.device.pilotingitf;
 
-import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.device.pilotingitf.PilotingItf;
 import com.parrot.drone.groundsdk.device.pilotingitf.PointOfInterestPilotingItf;
 import com.parrot.drone.groundsdk.internal.component.ComponentDescriptor;
 import com.parrot.drone.groundsdk.internal.component.ComponentStore;
+
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.internal.value.IntegerRangeCore.SIGNED_PERCENTAGE;
 

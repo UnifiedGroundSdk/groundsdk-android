@@ -32,7 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi;
 
-import android.util.Log;
 import android.util.SparseArray;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
@@ -148,7 +147,6 @@ public final class AnafiMotors extends DronePeripheralController {
         @Override
         public void onMotorSoftwareVersionChanged(String info) {
             if (info != null) {
-                Log.i("bla", "info=[" + info + "]");
                 final String[] data = info.split("\\.");
                 final String version = data[0] + "." + data[1];
 
