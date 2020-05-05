@@ -30,7 +30,7 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
 
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisMappableAction;
@@ -74,7 +74,7 @@ public final class AxisMappingEntry extends MappingEntry {
         super(Type.AXIS_MAPPING, droneModel);
         mAction = action;
         mAxisEvent = axisEvent;
-        mButtonEvents = buttonEvents == null || buttonEvents.isEmpty() ? Collections.emptySet()
+        mButtonEvents = buttonEvents.isEmpty() ? Collections.emptySet()
                 : Collections.unmodifiableSet(EnumSet.copyOf(buttonEvents));
     }
 

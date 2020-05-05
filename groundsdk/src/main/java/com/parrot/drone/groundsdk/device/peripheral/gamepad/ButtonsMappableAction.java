@@ -221,5 +221,7 @@ public enum ButtonsMappableAction {
      * Commands the controller to cycle between different configurations of the HUD on the external HDMI display (if
      * present and supported by the controller.)
      */
-    CYCLE_HUD
+    CYCLE_HUD,
+    NO_ACTION,
+    BACK
 }

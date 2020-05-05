@@ -44,6 +44,8 @@ import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.SkyContro
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.SkyControllerDroneFinder;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.SkyControllerMagnetometer;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.SkyControllerSystemInfo;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.gamepad.Sc1Gamepad;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.gamepad.Sc2Gamepad;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.gamepad.Sc3Gamepad;
 import com.parrot.drone.groundsdk.device.RemoteControl;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
@@ -55,7 +57,7 @@ import androidx.annotation.NonNull;
 /** RC controller for all remote controls of the SkyController family (starting from Skycontroller 3). */
 public class SkyControllerFamilyController extends RCController {
 
-//    private final RemoteControl.Model model;
+    private final RemoteControl.Model model;
 
     /**
      * Constructor.
@@ -69,7 +71,7 @@ public class SkyControllerFamilyController extends RCController {
                                          @NonNull RemoteControl.Model model, @NonNull String name) {
         super(engine, uid, model, name);
 
-//        this.model = model;
+        this.model = model;
 
         registerComponentControllers(
                 // instruments
@@ -77,7 +79,9 @@ public class SkyControllerFamilyController extends RCController {
                 new SkyControllerCompass(this),
                 // peripherals
                 new SkyControllerDroneFinder(this),
-                new Sc3Gamepad(this),
+                model == RemoteControl.Model.SKY_CONTROLLER ? new Sc1Gamepad(this) :
+                        model == RemoteControl.Model.SKY_CONTROLLER_2 ?  new Sc2Gamepad(this) :
+                                new Sc3Gamepad(this),
                 new SkyControllerSystemInfo(this),
                 new SkyControllerMagnetometer(this),
                 new SkyControllerCopilot(this),
@@ -94,6 +98,17 @@ public class SkyControllerFamilyController extends RCController {
 //            sendCommand(ArsdkFeatureCommon.Common.encodeCurrentTime(Iso8601.toBaseTimeOnlyFormat(currentDate)));
 //         } else {
             sendCommand(ArsdkFeatureSkyctrl.Common.encodeCurrentDateTime(Iso8601.toBaseDateAndTimeFormat(currentDate)));
+//        }
+
+//        if (model == RemoteControl.Model.SKY_CONTROLLER) {
+//            sendCommand(ArsdkFeatureSkyctrl.AxisMappings.encodeGetAvailableAxisMappings());
+//            sendCommand(ArsdkFeatureSkyctrl.AxisMappings.encodeGetCurrentAxisMappings()
+//            );
+//            sendCommand(ArsdkFeatureSkyctrl.ButtonMappings.encodeGetAvailableButtonMappings());
+//            sendCommand(ArsdkFeatureSkyctrl.ButtonMappings.encodeGetCurrentButtonMappings());
+//
+//            sendCommand(ArsdkFeatureSkyctrl.GamepadInfos.encodeGetGamepadControls());
+//            sendCommand(ArsdkFeatureSkyctrl.AxisFilters.encodeGetCurrentAxisFilters());
 //        }
     }
 }

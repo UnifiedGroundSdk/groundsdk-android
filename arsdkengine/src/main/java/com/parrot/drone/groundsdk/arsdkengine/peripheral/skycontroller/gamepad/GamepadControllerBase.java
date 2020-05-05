@@ -33,14 +33,8 @@
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.gamepad;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 import android.util.SparseArray;
-
-import androidx.annotation.CallSuper;
-import androidx.annotation.IntRange;
-import androidx.annotation.LongDef;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.RCController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.RCPeripheralController;
@@ -54,11 +48,21 @@ import com.parrot.drone.groundsdk.internal.device.DeviceModels;
 import com.parrot.drone.groundsdk.internal.device.peripheral.gamepad.VirtualGamepadCore;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureGeneric;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureMapper;
+import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import com.parrot.drone.sdkcore.ulog.ULog;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.IntRange;
+import androidx.annotation.LongDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_GAMEPAD;
 
@@ -268,6 +272,14 @@ abstract class GamepadControllerBase extends RCPeripheralController {
         int featureId = command.getFeatureId();
         if (featureId == ArsdkFeatureMapper.UID) {
             ArsdkFeatureMapper.decode(command, mMapperCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.AxisMappingsState.UID) {
+            ArsdkFeatureSkyctrl.AxisMappingsState.decode(command, mSc1AxisMappingsStateCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.ButtonMappingsState.UID) {
+            ArsdkFeatureSkyctrl.ButtonMappingsState.decode(command, mSc1ButtonMappingsStateCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.GamepadInfosState.UID) {
+            ArsdkFeatureSkyctrl.GamepadInfosState.decode(command, mSc1GamepadInfoStateCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.AxisFiltersState.UID) {
+            ArsdkFeatureSkyctrl.AxisFiltersState.decode(command, mSc1AxisFiltersStateCallbacks);
         }
     }
 
@@ -546,6 +558,173 @@ abstract class GamepadControllerBase extends RCPeripheralController {
             }
             mVirtualGamepadGrabbed = false;
             mVirtualGamepad.updateGrabbed(false).notifyUpdated();
+        }
+    };
+
+
+    private static class sc1Mapping {
+        int id;
+        String mappingUid;
+
+        sc1Mapping(final int id, final String mappingUid) {
+            this.id = id;
+            this.mappingUid = mappingUid;
+        }
+    }
+
+    private final ArsdkFeatureSkyctrl.AxisMappingsState.Callback mSc1AxisMappingsStateCallbacks = new ArsdkFeatureSkyctrl.AxisMappingsState.Callback() {
+        final Collection<sc1Mapping> loadAxisMappings = new ArrayList<>();
+
+        @Override
+        public void onCurrentAxisMappings(int axisId, String mappingUid) {
+//            Log.i("SC1", "current axis mapping id=" + axisId + " mappingUid=" + mappingUid);
+            loadAxisMappings.add(new sc1Mapping(axisId, mappingUid));
+        }
+
+        @Override
+        public void onAllCurrentAxisMappingsSent() {
+            Log.i("SC1", "all current axis mappings sent");
+            clearAllAxisMappings();
+
+            for (sc1Mapping mapping : loadAxisMappings) {
+                final AxisMappableAction action;
+
+                switch (mapping.mappingUid) {
+                    case "Pitch":
+                        action = AxisMappableAction.CONTROL_PITCH;
+                        break;
+                    case "Roll":
+                        action = AxisMappableAction.CONTROL_ROLL;
+                        break;
+                    case "Yaw":
+                        action = AxisMappableAction.CONTROL_THROTTLE;
+                        break;
+                    case "Gaz":
+                        action = AxisMappableAction.CONTROL_YAW_ROTATION_SPEED;
+                        break;
+                    case "Camera Pan":
+                        action = AxisMappableAction.PAN_CAMERA;
+                        break;
+                    case "Camera Tilt ":
+                        action = AxisMappableAction.TILT_CAMERA;
+                        break;
+                    case "No Action":
+                        action = AxisMappableAction.NO_ACTION;
+                        break;
+                    default:
+                        action = null;
+                        break;
+                }
+
+                if (action != null) {
+                    addAxisMappingEntry(mapping.id, Drone.Model.UNKNOWN, action, mapping.id, 0);
+                }
+            }
+
+            updateAxisMappings();
+            loadAxisMappings.clear();
+        }
+
+        @Override
+        public void onAvailableAxisMappings(String mappingUid, String name) {
+//            Log.i("SC1", "available axis mapping id=" + mappingUid + " name=" + name);
+
+        }
+
+        @Override
+        public void onAllAvailableAxisMappingsSent() {
+//            Log.i("SC1", "all available axis mappings sent");
+        }
+    };
+
+    private final ArsdkFeatureSkyctrl.ButtonMappingsState.Callback mSc1ButtonMappingsStateCallbacks = new ArsdkFeatureSkyctrl.ButtonMappingsState.Callback() {
+
+        final Collection<sc1Mapping> loadButtonMappings = new ArrayList<>();
+
+        @Override
+        public void onCurrentButtonMappings(int keyId, String mappingUid) {
+            loadButtonMappings.add(new sc1Mapping(keyId, mappingUid));
+        }
+
+        @Override
+        public void onAllCurrentButtonMappingsSent() {
+            Log.i("SC1", "all current button mappings sent");
+
+            clearAllButtonsMappings();
+
+            for (sc1Mapping mapping : loadButtonMappings) {
+                final ButtonsMappableAction action;
+
+                switch (mapping.mappingUid) {
+                    case "Emergency":
+                        action = ButtonsMappableAction.EMERGENCY_CUTOFF;
+                        break;
+                    case "Return Home":
+                        action = ButtonsMappableAction.RETURN_HOME;
+                        break;
+                    case "Record":
+                        action = ButtonsMappableAction.RECORD_VIDEO;
+                        break;
+                    case "Settings":
+                        action = ButtonsMappableAction.APP_ACTION_SETTINGS;
+                        break;
+                    case "Reset Camera":
+                        action = ButtonsMappableAction.CENTER_CAMERA;
+                        break;
+                    case "Takeoff/Landing ":
+                        action = ButtonsMappableAction.TAKEOFF_OR_LAND;
+                        break;
+                    case "Photo":
+                        action = ButtonsMappableAction.TAKE_PICTURE;
+                        break;
+                    case "No Action":
+                        action = ButtonsMappableAction.NO_ACTION;
+                        break;
+                    case "Back":
+                        action = ButtonsMappableAction.BACK;
+                        break;
+                    default:
+                        action = null;
+                        break;
+                }
+
+                if (action != null) {
+                    addButtonsMappingEntry(mapping.id, Drone.Model.UNKNOWN, action, mapping.id);
+                }
+            }
+
+            updateButtonsMappings();
+            loadButtonMappings.clear();
+        }
+
+        @Override
+        public void onAvailableButtonMappings(String mappingUid, String name) {
+//            Log.i("SC1", "available button mapping id=" + mappingUid + " name=" + name);
+        }
+
+        @Override
+        public void onAllAvailableButtonsMappingsSent() {
+//            Log.i("SC1", "all available button mappings sent");
+        }
+    };
+
+    private final ArsdkFeatureSkyctrl.GamepadInfosState.Callback mSc1GamepadInfoStateCallbacks = new ArsdkFeatureSkyctrl.GamepadInfosState.Callback() {
+
+        @Override
+        public void onGamepadControl(@Nullable ArsdkFeatureSkyctrl.GamepadinfosstateGamepadcontrolType type, int id, String name) {
+//            Log.i("SC1", "gamepad control type=" + type.name() + " id=" + id + " name=" + name);
+        }
+    };
+
+    private final ArsdkFeatureSkyctrl.AxisFiltersState.Callback mSc1AxisFiltersStateCallbacks = new ArsdkFeatureSkyctrl.AxisFiltersState.Callback() {
+        @Override
+        public void onCurrentAxisFilters(int axisId, String filterUidOrBuilder) {
+//            Log.i("SC1", "current axis filter id=" + axisId + " filterUid=" + filterUidOrBuilder);
+        }
+
+        @Override
+        public void onAllCurrentFiltersSent() {
+//            Log.i("SC1", "all current filters sent");
         }
     };
 

@@ -30,7 +30,7 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
 
 import com.parrot.drone.groundsdk.device.peripheral.SkyController3Gamepad;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisInterpolator;
@@ -80,12 +80,7 @@ public enum AxisEvent {
     /**
      * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_SLIDER right slider} is moved.
      */
-    RIGHT_SLIDER,
-
-    TOP_LEFT_HORIZONTAL_SC1,
-    TOP_LEFT_VERTICAL_SC1,
-    TOP_RIGHT_HORIZONTAL_SC1,
-    TOP_RIGHT_VERTICAL_SC1;
+    RIGHT_SLIDER;
 
     /**
      * Receives axis events sent from the remote control when a corresponding input is grabbed.

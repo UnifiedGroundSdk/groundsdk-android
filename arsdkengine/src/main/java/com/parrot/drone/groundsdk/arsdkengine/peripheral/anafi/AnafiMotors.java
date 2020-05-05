@@ -148,7 +148,12 @@ public final class AnafiMotors extends DronePeripheralController {
         public void onMotorSoftwareVersionChanged(String info) {
             if (info != null) {
                 final String[] data = info.split("\\.");
-                final String version = data[0] + "." + data[1];
+
+                String version = "N/A";
+
+                if (data.length > 1) {
+                    version = data[0] + "." + data[1];
+                }
 
                 if (data.length > 2) {
                     final String type = data[2];

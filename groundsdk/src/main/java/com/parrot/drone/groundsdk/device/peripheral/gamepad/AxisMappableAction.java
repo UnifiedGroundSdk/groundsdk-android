@@ -59,5 +59,7 @@ public enum AxisMappableAction {
     TILT_CAMERA,
 
     /** Controls the connected drone camera zoom. */
-    ZOOM_CAMERA
+    ZOOM_CAMERA,
+
+    NO_ACTION
 }

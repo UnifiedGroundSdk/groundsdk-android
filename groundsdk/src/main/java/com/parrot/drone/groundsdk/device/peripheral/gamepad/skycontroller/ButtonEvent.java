@@ -30,7 +30,7 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
 
 import com.parrot.drone.groundsdk.device.peripheral.SkyController3Gamepad;
 
@@ -140,21 +140,7 @@ public enum ButtonEvent {
      * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_SLIDER right slider} reaches or quits the right stop
      * of its course.
      */
-    RIGHT_SLIDER_DOWN,
-
-    HOME,
-    RIGHT_MINI_JS,
-    TAKEOFF_LAND,
-    RECORD,
-    EMERGENCY,
-    LEFT_MINI_JS,
-    RETURN_HOME,
-    BACK,
-    NO_ACTION,
-
-    SETTINGS,
-    BUTTON_B,
-    BUTTON_A;
+    RIGHT_SLIDER_DOWN;
 
     /** State of the corresponding button. */
     public enum State {

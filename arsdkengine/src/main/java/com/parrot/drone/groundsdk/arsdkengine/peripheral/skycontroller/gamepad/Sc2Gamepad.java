@@ -64,9 +64,9 @@ import androidx.annotation.VisibleForTesting;
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_GAMEPAD;
 
 /**
- * SkyController3Gamepad peripheral controller for SkyController3 remote control.
+ * SkyController3Gamepad peripheral controller for SkyController2 remote control.
  */
-public final class Sc3Gamepad extends GamepadControllerBase {
+public final class Sc2Gamepad extends GamepadControllerBase {
 
     /** The kyController3Gamepad peripheral for which this object is the backend. */
     @NonNull
@@ -94,7 +94,7 @@ public final class Sc3Gamepad extends GamepadControllerBase {
      * @param deviceController the device controller that owns this peripheral controller.
      */
     @SuppressLint("UseSparseArrays") // SparseArray has no values() method
-    public Sc3Gamepad(@NonNull RCController deviceController) {
+    public Sc2Gamepad(@NonNull RCController deviceController) {
         super(deviceController, new Translator());
         mGamepad = new SkyController3GamepadCore(mComponentStore, mBackend);
 
@@ -246,6 +246,8 @@ public final class Sc3Gamepad extends GamepadControllerBase {
                                 + " , axes: " + Long.toBinaryString(axesMask) + "]");
                     }
                 }
+            } else {
+                ULog.w(TAG_GAMEPAD, "OnGrabState info is null button=" + button.name());
             }
         }
         // collect grabbed axes
@@ -263,6 +265,8 @@ public final class Sc3Gamepad extends GamepadControllerBase {
                                 + " , axes: " + Long.toBinaryString(axesMask) + "]");
                     }
                 }
+            } else {
+                ULog.w(TAG_GAMEPAD, "OnGrabState info is null axis=" + axis.name());
             }
         }
         // publish state to gamepad
@@ -334,18 +338,20 @@ public final class Sc3Gamepad extends GamepadControllerBase {
         @Override
         public void setAxisInterpolator(@NonNull Drone.Model droneModel, @NonNull SkyController3Gamepad.Axis axis,
                                         @NonNull AxisInterpolator interpolator) {
-            Sc3Gamepad.this.setAxisInterpolator(droneModel, InputMasks.of(axis).mAxes, interpolator);
+            if (InputMasks.of(axis) != null) {
+                Sc2Gamepad.this.setAxisInterpolator(droneModel, InputMasks.of(axis).mAxes, interpolator);
+            }
         }
 
         @Override
         public void setReversedAxis(@NonNull Drone.Model droneModel, @NonNull SkyController3Gamepad.Axis axis,
                                     boolean reversed) {
-            Sc3Gamepad.this.setReversedAxis(droneModel, InputMasks.of(axis).mAxes, reversed);
+            Sc2Gamepad.this.setReversedAxis(droneModel, InputMasks.of(axis).mAxes, reversed);
         }
 
         @Override
         public void resetMappings(@Nullable Drone.Model model) {
-            Sc3Gamepad.this.resetMappings(model);
+            Sc2Gamepad.this.resetMappings(model);
         }
 
         @Override
@@ -362,7 +368,7 @@ public final class Sc3Gamepad extends GamepadControllerBase {
         }
     };
 
-    /** Translates mapper buttons/axes masks to navigation events for SkyController3 VirtualGamepad implementation. */
+    /** Translates mapper buttons/axes masks to navigation events for SkyController2 VirtualGamepad implementation. */
     private static final class Translator implements NavigationEventTranslator {
 
         /**
@@ -372,7 +378,7 @@ public final class Sc3Gamepad extends GamepadControllerBase {
          */
         @ButtonMask
         private static final long BUTTONS_MASK =
-                MASK_BUTTON_4 | MASK_BUTTON_5 | MASK_BUTTON_6 | MASK_BUTTON_7 | MASK_BUTTON_2 | MASK_BUTTON_3;
+                MASK_BUTTON_12 | MASK_BUTTON_13 | MASK_BUTTON_14 | MASK_BUTTON_15 | MASK_BUTTON_5 | MASK_BUTTON_6;
 
         /**
          * Mask of axes to use to grab navigation.
@@ -408,12 +414,12 @@ public final class Sc3Gamepad extends GamepadControllerBase {
         private static final LongSparseArray<VirtualGamepad.Event> EVENTS = new LongSparseArray<>();
 
         static {
-            EVENTS.put(MASK_BUTTON_4, VirtualGamepad.Event.LEFT);
-            EVENTS.put(MASK_BUTTON_5, VirtualGamepad.Event.RIGHT);
-            EVENTS.put(MASK_BUTTON_6, VirtualGamepad.Event.UP);
-            EVENTS.put(MASK_BUTTON_7, VirtualGamepad.Event.DOWN);
-            EVENTS.put(MASK_BUTTON_2, VirtualGamepad.Event.CANCEL);
-            EVENTS.put(MASK_BUTTON_3, VirtualGamepad.Event.OK);
+            EVENTS.put(MASK_BUTTON_12, VirtualGamepad.Event.LEFT);
+            EVENTS.put(MASK_BUTTON_13, VirtualGamepad.Event.RIGHT);
+            EVENTS.put(MASK_BUTTON_14, VirtualGamepad.Event.UP);
+            EVENTS.put(MASK_BUTTON_15, VirtualGamepad.Event.DOWN);
+            EVENTS.put(MASK_BUTTON_5, VirtualGamepad.Event.CANCEL);
+            EVENTS.put(MASK_BUTTON_6, VirtualGamepad.Event.OK);
         }
     }
 
@@ -530,22 +536,29 @@ public final class Sc3Gamepad extends GamepadControllerBase {
         }
 
         static {
-            map(MASK_BUTTON_0, ButtonEvent.FRONT_TOP_BUTTON);
-            map(MASK_BUTTON_1, ButtonEvent.FRONT_BOTTOM_BUTTON);
-            map(MASK_BUTTON_2, ButtonEvent.REAR_LEFT_BUTTON);
-            map(MASK_BUTTON_3, ButtonEvent.REAR_RIGHT_BUTTON);
-            map(MASK_BUTTON_4, ButtonEvent.LEFT_STICK_LEFT);
-            map(MASK_BUTTON_5, ButtonEvent.LEFT_STICK_RIGHT);
-            map(MASK_BUTTON_6, ButtonEvent.LEFT_STICK_UP);
-            map(MASK_BUTTON_7, ButtonEvent.LEFT_STICK_DOWN);
-            map(MASK_BUTTON_8, ButtonEvent.RIGHT_STICK_LEFT);
-            map(MASK_BUTTON_9, ButtonEvent.RIGHT_STICK_RIGHT);
-            map(MASK_BUTTON_10, ButtonEvent.RIGHT_STICK_UP);
-            map(MASK_BUTTON_11, ButtonEvent.RIGHT_STICK_DOWN);
-            map(MASK_BUTTON_12, ButtonEvent.LEFT_SLIDER_DOWN);
-            map(MASK_BUTTON_13, ButtonEvent.LEFT_SLIDER_UP);
-            map(MASK_BUTTON_14, ButtonEvent.RIGHT_SLIDER_UP);
-            map(MASK_BUTTON_15, ButtonEvent.RIGHT_SLIDER_DOWN);
+            map(MASK_BUTTON_0, ButtonEvent.SETTINGS);
+            map(MASK_BUTTON_1, ButtonEvent.RETURN_HOME);
+            map(MASK_BUTTON_2, ButtonEvent.TAKEOFF_LAND);
+            map(MASK_BUTTON_3, ButtonEvent.BUTTON_B);
+            map(MASK_BUTTON_4, ButtonEvent.BUTTON_A);
+            map(MASK_BUTTON_5, ButtonEvent.REAR_LEFT_BUTTON);
+            map(MASK_BUTTON_6, ButtonEvent.REAR_RIGHT_BUTTON);
+//            map(MASK_BUTTON_7, ButtonEvent.SC2_8);
+            map(MASK_BUTTON_8, ButtonEvent.LEFT_STICK_DOWN);
+            map(MASK_BUTTON_9, ButtonEvent.RIGHT_STICK_DOWN);
+            map(MASK_BUTTON_10, ButtonEvent.RIGHT_SLIDER_DOWN);
+            map(MASK_BUTTON_11, ButtonEvent.RIGHT_SLIDER_UP);
+            map(MASK_BUTTON_12, ButtonEvent.LEFT_STICK_LEFT);
+            map(MASK_BUTTON_13, ButtonEvent.LEFT_STICK_RIGHT);
+            map(MASK_BUTTON_14, ButtonEvent.LEFT_STICK_UP);
+            map(MASK_BUTTON_15, ButtonEvent.LEFT_STICK_DOWN);
+            map(MASK_BUTTON_16, ButtonEvent.RIGHT_STICK_LEFT);
+            map(MASK_BUTTON_17, ButtonEvent.RIGHT_STICK_RIGHT);
+            map(MASK_BUTTON_18, ButtonEvent.RIGHT_STICK_UP);
+            map(MASK_BUTTON_19, ButtonEvent.RIGHT_STICK_DOWN);
+            map(MASK_BUTTON_20, ButtonEvent.LEFT_SLIDER_DOWN);
+            map(MASK_BUTTON_21, ButtonEvent.LEFT_SLIDER_UP);
+//            map(MASK_BUTTON_22, ButtonEvent.SC2_23);
         }
     }
 
@@ -634,7 +647,7 @@ public final class Sc3Gamepad extends GamepadControllerBase {
          *
          * @return the button's info structure, containing the corresponding Mapper buttons and/or axes masks
          */
-        @NonNull
+//        @NonNull
         static InputMasks of(@NonNull SkyController3Gamepad.Button button) {
             //noinspection ConstantConditions: map is complete
             return ARSDK_BUTTONS_MASKS.get(button);
@@ -647,14 +660,14 @@ public final class Sc3Gamepad extends GamepadControllerBase {
          *
          * @return the axis' info structure, containing the corresponding Mapper buttons and/or axes masks
          */
-        @NonNull
+//        @NonNull
         static InputMasks of(@NonNull SkyController3Gamepad.Axis axis) {
             //noinspection ConstantConditions: map is complete
             return ARSDK_AXES_MASKS.get(axis);
         }
 
         /**
-         * Gets a SkyController3 gamepad axis from its ARSDK Mapper mask representation.
+         * Gets a SkyController2 gamepad axis from its ARSDK Mapper mask representation.
          *
          * @param axisMask mask of the axis to retrieve.
          *
@@ -687,6 +700,8 @@ public final class Sc3Gamepad extends GamepadControllerBase {
                 if (info != null) {
                     buttonsMask |= info.mButtons;
                     axesMask |= info.mAxes;
+                } else {
+                    ULog.w(TAG_GAMEPAD, "collect info is null button=" + button.name());
                 }
             }
 
@@ -695,6 +710,8 @@ public final class Sc3Gamepad extends GamepadControllerBase {
                 if (info != null) {
                     buttonsMask |= info.mButtons;
                     axesMask |= info.mAxes;
+                } else {
+                    ULog.w(TAG_GAMEPAD, "collect info is null axis=" + axis.name());
                 }
             }
 
@@ -747,16 +764,20 @@ public final class Sc3Gamepad extends GamepadControllerBase {
         }
 
         static {
-            map(SkyController3Gamepad.Button.FRONT_TOP_BUTTON, MASK_BUTTON_0);
-            map(SkyController3Gamepad.Button.FRONT_BOTTOM_BUTTON, MASK_BUTTON_1);
-            map(SkyController3Gamepad.Button.REAR_LEFT_BUTTON, MASK_BUTTON_2);
-            map(SkyController3Gamepad.Button.REAR_RIGHT_BUTTON, MASK_BUTTON_3);
-            map(SkyController3Gamepad.Axis.LEFT_STICK_HORIZONTAL, MASK_BUTTON_4 | MASK_BUTTON_5, MASK_AXIS_0);
-            map(SkyController3Gamepad.Axis.LEFT_STICK_VERTICAL, MASK_BUTTON_6 | MASK_BUTTON_7, MASK_AXIS_1);
-            map(SkyController3Gamepad.Axis.RIGHT_STICK_HORIZONTAL, MASK_BUTTON_8 | MASK_BUTTON_9, MASK_AXIS_2);
-            map(SkyController3Gamepad.Axis.RIGHT_STICK_VERTICAL, MASK_BUTTON_10 | MASK_BUTTON_11, MASK_AXIS_3);
-            map(SkyController3Gamepad.Axis.LEFT_SLIDER, MASK_BUTTON_12 | MASK_BUTTON_13, MASK_AXIS_4);
-            map(SkyController3Gamepad.Axis.RIGHT_SLIDER, MASK_BUTTON_14 | MASK_BUTTON_15, MASK_AXIS_5);
+            map(SkyController3Gamepad.Button.SETTINGS, MASK_BUTTON_0);
+            map(SkyController3Gamepad.Button.RETURN_HOME, MASK_BUTTON_1);
+            map(SkyController3Gamepad.Button.TAKEOFF_LAND, MASK_BUTTON_2);
+            map(SkyController3Gamepad.Button.BUTTON_B, MASK_BUTTON_3);
+            map(SkyController3Gamepad.Button.BUTTON_A, MASK_BUTTON_4);
+            map(SkyController3Gamepad.Button.FRONT_LEFT_BUTTON, MASK_BUTTON_5);
+            map(SkyController3Gamepad.Button.FRONT_RIGHT_BUTTON, MASK_BUTTON_6);
+
+            map(SkyController3Gamepad.Axis.LEFT_STICK_HORIZONTAL, MASK_BUTTON_12 | MASK_BUTTON_13, MASK_AXIS_0);
+            map(SkyController3Gamepad.Axis.LEFT_STICK_VERTICAL, MASK_BUTTON_14 | MASK_BUTTON_15, MASK_AXIS_1);
+            map(SkyController3Gamepad.Axis.RIGHT_STICK_HORIZONTAL, MASK_BUTTON_16 | MASK_BUTTON_17, MASK_AXIS_2);
+            map(SkyController3Gamepad.Axis.RIGHT_STICK_VERTICAL, MASK_BUTTON_18 | MASK_BUTTON_19, MASK_AXIS_3);
+            map(SkyController3Gamepad.Axis.LEFT_SLIDER, MASK_BUTTON_20 | MASK_BUTTON_21, MASK_AXIS_4);
+            map(SkyController3Gamepad.Axis.RIGHT_SLIDER, MASK_BUTTON_10 | MASK_BUTTON_11, MASK_AXIS_5);
         }
     }
 }

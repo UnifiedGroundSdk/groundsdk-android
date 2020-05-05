@@ -30,10 +30,10 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
 
 import com.parrot.drone.groundsdk.device.Drone;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisMappableAction;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.ButtonsMappableAction;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -42,19 +42,14 @@ import java.util.Set;
 import androidx.annotation.NonNull;
 
 /**
- * A mapping entry that defines an {@link AxisMappableAction} to be triggered when the gamepad inputs produce
- * an {@link AxisEvent}, optionally in conjunction with a specific set of {@link ButtonEvent button events}
- * in the {@link ButtonEvent.State#PRESSED pressed} state.
+ * A mapping entry that defines a {@link ButtonsMappableAction} to be triggered when the gamepad inputs produce
+ * a set of {@link ButtonEvent button events} in the {@link ButtonEvent.State#PRESSED pressed} state.
  */
-public final class AxisMappingEntry extends MappingEntry {
+public final class ButtonsMappingEntry extends MappingEntry {
 
     /** Action to be triggered. */
     @NonNull
-    private final AxisMappableAction mAction;
-
-    /** Axis event that triggers the action. */
-    @NonNull
-    private final AxisEvent mAxisEvent;
+    private final ButtonsMappableAction mAction;
 
     /** Set of button events that triggers the action when in the {@link ButtonEvent.State#PRESSED pressed} state. */
     @NonNull
@@ -65,16 +60,13 @@ public final class AxisMappingEntry extends MappingEntry {
      *
      * @param droneModel   drone model onto which the entry should apply
      * @param action       action to be triggered
-     * @param axisEvent    axis event that triggers the action
-     * @param buttonEvents button event set that triggers the action
+     * @param buttonEvents event set that triggers the action
      */
-    public AxisMappingEntry(@NonNull Drone.Model droneModel, @NonNull AxisMappableAction action,
-                            @NonNull AxisEvent axisEvent,
-                            @NonNull EnumSet<ButtonEvent> buttonEvents) {
-        super(Type.AXIS_MAPPING, droneModel);
+    public ButtonsMappingEntry(@NonNull Drone.Model droneModel, @NonNull ButtonsMappableAction action,
+                               @NonNull Set<ButtonEvent> buttonEvents) {
+        super(Type.BUTTONS_MAPPING, droneModel);
         mAction = action;
-        mAxisEvent = axisEvent;
-        mButtonEvents = buttonEvents == null || buttonEvents.isEmpty() ? Collections.emptySet()
+        mButtonEvents = buttonEvents.isEmpty() ? Collections.emptySet()
                 : Collections.unmodifiableSet(EnumSet.copyOf(buttonEvents));
     }
 
@@ -84,18 +76,8 @@ public final class AxisMappingEntry extends MappingEntry {
      * @return action to be triggered
      */
     @NonNull
-    public AxisMappableAction getAction() {
+    public ButtonsMappableAction getAction() {
         return mAction;
-    }
-
-    /**
-     * Gets the axis event that triggers the action.
-     *
-     * @return axis event that triggers the action
-     */
-    @NonNull
-    public AxisEvent getAxisEvent() {
-        return mAxisEvent;
     }
 
     /**
@@ -122,9 +104,9 @@ public final class AxisMappingEntry extends MappingEntry {
             return false;
         }
 
-        AxisMappingEntry that = (AxisMappingEntry) o;
+        ButtonsMappingEntry entry = (ButtonsMappingEntry) o;
 
-        return mAction == that.mAction;
+        return mAction == entry.mAction;
     }
 
     @Override

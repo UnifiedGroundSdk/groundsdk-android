@@ -63,6 +63,9 @@ public abstract class Drone
         /** Evinrude (Disco) drone */
         DISCO(0x090e),
 
+        /** Chimera (Bluegrass) drone */
+        BLUEGRASS(0x916),
+
         /** Mambo drone */
         MAMBO(0x090b),
 

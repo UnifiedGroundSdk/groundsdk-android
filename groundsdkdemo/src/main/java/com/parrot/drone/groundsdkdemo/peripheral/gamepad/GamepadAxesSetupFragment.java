@@ -43,12 +43,6 @@ import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.parrot.drone.groundsdk.ManagedGroundSdk;
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.RemoteControl;
@@ -56,6 +50,12 @@ import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisInterpolator;
 import com.parrot.drone.groundsdkdemo.R;
 import com.parrot.drone.groundsdkdemo.peripheral.gamepad.facade.GamepadFacade;
 import com.parrot.drone.groundsdkdemo.peripheral.gamepad.facade.GamepadFacadeProvider;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class GamepadAxesSetupFragment extends Fragment {
 
@@ -168,11 +168,13 @@ public class GamepadAxesSetupFragment extends Fragment {
         }
 
         final void bindEntry(@NonNull GamepadFacade.Axis axis) {
-            mAxisText.setText(axis.toString());
-            //noinspection ConstantConditions
-            mInterpolatorSpinner.setSelection(mGamepad.getAxisInterpolators(mDroneModel).get(axis).ordinal());
-            //noinspection ConstantConditions
-            mReversedCheckbox.setChecked(mGamepad.getReversedAxes(mDroneModel).contains(axis));
+            if (mGamepad.getAxisInterpolators(mDroneModel).get(axis) != null) {
+                mAxisText.setText(axis.toString());
+                //noinspection ConstantConditions
+                mInterpolatorSpinner.setSelection(mGamepad.getAxisInterpolators(mDroneModel).get(axis).ordinal());
+                //noinspection ConstantConditions
+                mReversedCheckbox.setChecked(mGamepad.getReversedAxes(mDroneModel).contains(axis));
+            }
         }
     }
 }

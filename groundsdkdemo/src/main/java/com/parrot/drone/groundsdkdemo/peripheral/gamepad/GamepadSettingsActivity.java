@@ -40,6 +40,8 @@ import com.parrot.drone.groundsdkdemo.GroundSdkActivityBase;
 import com.parrot.drone.groundsdkdemo.R;
 import com.parrot.drone.groundsdkdemo.settings.ToggleSettingView;
 
+import java.util.Objects;
+
 import static com.parrot.drone.groundsdkdemo.Extras.EXTRA_DEVICE_UID;
 import static com.parrot.drone.groundsdkdemo.settings.SettingViewAdapters.updateSetting;
 
@@ -51,7 +53,7 @@ public class GamepadSettingsActivity extends GroundSdkActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        RemoteControl rc = groundSdk().getRemoteControl(getIntent().getStringExtra(EXTRA_DEVICE_UID));
+        RemoteControl rc = groundSdk().getRemoteControl(Objects.requireNonNull(getIntent().getStringExtra(EXTRA_DEVICE_UID)));
         if (rc == null) {
             finish();
             return;

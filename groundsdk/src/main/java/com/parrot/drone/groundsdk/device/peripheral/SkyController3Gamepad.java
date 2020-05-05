@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.device.peripheral;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.parrot.drone.groundsdk.Ref;
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.RemoteControl;
@@ -51,6 +48,9 @@ import com.parrot.drone.groundsdk.value.OptionalBooleanSetting;
 
 import java.util.Map;
 import java.util.Set;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Gamepad peripheral interface for {@link Model#SKY_CONTROLLER_3 SkyController3} {@link RemoteControl devices}.
@@ -155,6 +155,22 @@ public interface SkyController3Gamepad extends Peripheral {
          * </ul>
          */
         REAR_RIGHT_BUTTON,
+
+        HOME,
+        RIGHT_MINI_JS,
+        TAKEOFF_LAND,
+        RECORD,
+        EMERGENCY,
+        LEFT_MINI_JS,
+        RETURN_HOME,
+        BACK,
+
+        SETTINGS,
+        BUTTON_B,
+        BUTTON_A,
+        FRONT_LEFT_BUTTON,
+        FRONT_RIGHT_BUTTON,
+
     }
 
     /** A physical axis input that can be grabbed on SkyController3 gamepad. */
@@ -214,7 +230,12 @@ public interface SkyController3Gamepad extends Peripheral {
          * Produces {@link ButtonEvent#RIGHT_SLIDER_UP}, {@link ButtonEvent#RIGHT_SLIDER_DOWN} and
          * {@link AxisEvent#RIGHT_SLIDER} events when grabbed.
          */
-        RIGHT_SLIDER
+        RIGHT_SLIDER,
+
+        TOP_LEFT_HORIZONTAL,
+        TOP_LEFT_VERTICAL,
+        TOP_RIGHT_HORIZONTAL,
+        TOP_RIGHT_VERTICAL
     }
 
     /**
