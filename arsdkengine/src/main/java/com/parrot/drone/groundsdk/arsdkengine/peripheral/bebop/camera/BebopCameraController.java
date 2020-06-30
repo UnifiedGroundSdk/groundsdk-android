@@ -531,7 +531,11 @@ public final class BebopCameraController extends DronePeripheralController {
         }
 
         @Override
-        public boolean setExposure(@NonNull CameraExposure.Mode mode, @NonNull CameraExposure.ShutterSpeed manualShutterSpeed, @NonNull CameraExposure.IsoSensitivity manualIsoSensitivity, @NonNull CameraExposure.IsoSensitivity maxIsoSensitivity) {
+        public boolean setExposure(@NonNull CameraExposure.Mode mode,
+                                   @NonNull CameraExposure.ShutterSpeed manualShutterSpeed,
+                                   @NonNull CameraExposure.IsoSensitivity manualIsoSensitivity,
+                                   @NonNull CameraExposure.IsoSensitivity maxIsoSensitivity,
+                                   @NonNull CameraExposure.AutoExposureMeteringMode autoExposureMeteringMode) {
             return false;
         }
 

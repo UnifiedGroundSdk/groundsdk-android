@@ -229,8 +229,12 @@ public final class MiniatureCameraController extends DronePeripheralController {
         }
 
         @Override
-        public boolean setExposure(@NonNull CameraExposure.Mode mode, @NonNull CameraExposure.ShutterSpeed manualShutterSpeed, @NonNull CameraExposure.IsoSensitivity manualIsoSensitivity, @NonNull CameraExposure.IsoSensitivity maxIsoSensitivity) {
-            return false;
+        public boolean setExposure(@NonNull CameraExposure.Mode mode,
+                                   @NonNull CameraExposure.ShutterSpeed manualShutterSpeed,
+                                   @NonNull CameraExposure.IsoSensitivity manualIsoSensitivity,
+                                   @NonNull CameraExposure.IsoSensitivity maxIsoSensitivity,
+                                   @NonNull CameraExposure.AutoExposureMeteringMode autoExposureMeteringMode) {
+             return false;
         }
 
         @Override
@@ -352,7 +356,7 @@ public final class MiniatureCameraController extends DronePeripheralController {
         public void onVideoStateChanged(@Nullable ArsdkFeatureMinidrone.MinicamstateVideostatechangedState state, @Nullable ArsdkFeatureMinidrone.MinicamstateVideostatechangedError error) {
             assert state != null;
             assert error != null;
-            
+
             switch (state) {
                 case NOTAVAILABLE:
                 case STOPPED:
