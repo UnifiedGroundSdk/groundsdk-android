@@ -544,8 +544,8 @@ public final class Sc2Gamepad extends GamepadControllerBase {
             map(MASK_BUTTON_5, ButtonEvent.REAR_LEFT_BUTTON);
             map(MASK_BUTTON_6, ButtonEvent.REAR_RIGHT_BUTTON);
 //            map(MASK_BUTTON_7, ButtonEvent.SC2_8);
-            map(MASK_BUTTON_8, ButtonEvent.LEFT_STICK_DOWN);
-            map(MASK_BUTTON_9, ButtonEvent.RIGHT_STICK_DOWN);
+//            map(MASK_BUTTON_8, ButtonEvent.LEFT_STICK_DOWN);
+//            map(MASK_BUTTON_9, ButtonEvent.RIGHT_STICK_DOWN);
             map(MASK_BUTTON_10, ButtonEvent.RIGHT_SLIDER_DOWN);
             map(MASK_BUTTON_11, ButtonEvent.RIGHT_SLIDER_UP);
             map(MASK_BUTTON_12, ButtonEvent.LEFT_STICK_LEFT);
@@ -769,8 +769,8 @@ public final class Sc2Gamepad extends GamepadControllerBase {
             map(SkyController3Gamepad.Button.TAKEOFF_LAND, MASK_BUTTON_2);
             map(SkyController3Gamepad.Button.BUTTON_B, MASK_BUTTON_3);
             map(SkyController3Gamepad.Button.BUTTON_A, MASK_BUTTON_4);
-            map(SkyController3Gamepad.Button.FRONT_LEFT_BUTTON, MASK_BUTTON_5);
-            map(SkyController3Gamepad.Button.FRONT_RIGHT_BUTTON, MASK_BUTTON_6);
+            map(SkyController3Gamepad.Button.REAR_LEFT_BUTTON, MASK_BUTTON_5);
+            map(SkyController3Gamepad.Button.REAR_RIGHT_BUTTON, MASK_BUTTON_6);
 
             map(SkyController3Gamepad.Axis.LEFT_STICK_HORIZONTAL, MASK_BUTTON_12 | MASK_BUTTON_13, MASK_AXIS_0);
             map(SkyController3Gamepad.Axis.LEFT_STICK_VERTICAL, MASK_BUTTON_14 | MASK_BUTTON_15, MASK_AXIS_1);

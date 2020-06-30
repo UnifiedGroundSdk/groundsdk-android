@@ -674,14 +674,14 @@ public final class Sc1Gamepad extends GamepadControllerBase {
         }
 
         static {
-            map(0, AxisEvent.TOP_LEFT_HORIZONTAL_SC1);
-            map(1, AxisEvent.TOP_LEFT_VERTICAL_SC1);
+            map(0, AxisEvent.TOP_LEFT_HORIZONTAL);
+            map(1, AxisEvent.TOP_LEFT_VERTICAL);
             map(2, AxisEvent.RIGHT_STICK_HORIZONTAL);
             map(3, AxisEvent.RIGHT_STICK_VERTICAL);
             map(4, AxisEvent.LEFT_STICK_HORIZONTAL);
             map(5, AxisEvent.LEFT_STICK_VERTICAL);
-            map(6, AxisEvent.TOP_RIGHT_HORIZONTAL_SC1);
-            map(7, AxisEvent.TOP_RIGHT_VERTICAL_SC1);
+            map(6, AxisEvent.TOP_RIGHT_HORIZONTAL);
+            map(7, AxisEvent.TOP_RIGHT_VERTICAL);
         }
     }
 

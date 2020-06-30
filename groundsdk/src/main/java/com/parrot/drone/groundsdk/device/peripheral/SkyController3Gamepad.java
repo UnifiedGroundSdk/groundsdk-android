@@ -168,9 +168,6 @@ public interface SkyController3Gamepad extends Peripheral {
         SETTINGS,
         BUTTON_B,
         BUTTON_A,
-        FRONT_LEFT_BUTTON,
-        FRONT_RIGHT_BUTTON,
-
     }
 
     /** A physical axis input that can be grabbed on SkyController3 gamepad. */

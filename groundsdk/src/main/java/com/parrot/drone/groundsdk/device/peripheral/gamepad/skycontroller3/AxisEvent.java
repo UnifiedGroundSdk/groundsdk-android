@@ -82,10 +82,10 @@ public enum AxisEvent {
      */
     RIGHT_SLIDER,
 
-    TOP_LEFT_HORIZONTAL_SC1,
-    TOP_LEFT_VERTICAL_SC1,
-    TOP_RIGHT_HORIZONTAL_SC1,
-    TOP_RIGHT_VERTICAL_SC1;
+    TOP_LEFT_HORIZONTAL,
+    TOP_LEFT_VERTICAL,
+    TOP_RIGHT_HORIZONTAL,
+    TOP_RIGHT_VERTICAL;
 
     /**
      * Receives axis events sent from the remote control when a corresponding input is grabbed.
