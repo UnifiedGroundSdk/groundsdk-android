@@ -14,8 +14,8 @@ android {
 }
 
 dependencies {
-    implementation project(':groundsdk')
-    implementation project(':sdkcore')
+    implementation project(':groundsdk-android-groundsdk')
+    implementation project(':groundsdk-android-sdkcore')
     implementation gson
 
     implementation retrofit
@@ -28,7 +28,7 @@ dependencies {
 
     implementation androidXAnnotations
 
-    implementation 'com.google.firebase:firebase-crashlytics:17.0.0-beta03'
+    implementation 'com.google.firebase:firebase-crashlytics:17.1.0'
 
 //    androidTestImplementation project(':sdkcore-testing')
 //    androidTestImplementation androidXTestCore
