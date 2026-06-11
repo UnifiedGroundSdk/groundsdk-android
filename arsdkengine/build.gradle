@@ -14,8 +14,8 @@ android {
 }
 
 dependencies {
-    implementation project(':groundsdk-android-groundsdk')
-    implementation project(':groundsdk-android-sdkcore')
+    implementation project(':groundsdk')
+    implementation project(':sdkcore')
     implementation gson
 
     implementation retrofit

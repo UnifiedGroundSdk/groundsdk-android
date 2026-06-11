@@ -33,7 +33,7 @@ task('generateCommands', type: Exec) {
     workingDir "."
     def cmdline
     if (Os.isFamily(Os.FAMILY_MAC)) {
-        cmdline = ["/usr/local/bin/python3", ext.parser.absolutePath, ext.generator.absolutePath, "-o", ext.destDir.absolutePath]
+        cmdline = ["python3", ext.parser.absolutePath, ext.generator.absolutePath, "-o", ext.destDir.absolutePath]
     } else {
         cmdline = [ext.parser.absolutePath, ext.generator.absolutePath, "-o", ext.destDir.absolutePath]
     }

@@ -13,10 +13,10 @@ android {
 }
 
 dependencies {
-    runtimeOnly project(':groundsdk-android-arsdkengine')
+    runtimeOnly project(':arsdkengine')
 
-    implementation project(':groundsdk-android-groundsdk')
-    implementation project(':groundsdk-android-sdkcore')
+    implementation project(':groundsdk')
+    implementation project(':sdkcore')
 
     implementation androidXLocalBroadcastManager
     implementation googlePlayServicesLocation
