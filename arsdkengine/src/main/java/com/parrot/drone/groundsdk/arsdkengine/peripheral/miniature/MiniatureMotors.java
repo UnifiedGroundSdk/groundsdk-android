@@ -41,6 +41,10 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import androidx.annotation.NonNull;
 
+import com.parrot.drone.sdkcore.ulog.ULog;
+
+import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG;
+
 /** CopterMotors peripheral controller for Anafi family drones. */
 public final class MiniatureMotors extends DronePeripheralController {
 
@@ -84,6 +88,10 @@ public final class MiniatureMotors extends DronePeripheralController {
     private final ArsdkFeatureMinidrone.SettingsState.Callback mSettingsStateCallback = new ArsdkFeatureMinidrone.SettingsState.Callback() {
         @Override
         public void onProductMotorsVersionChanged(int motor, String type, String software, String hardware) {
+            if (motor < 0 || motor >= CopterMotors.Motor.values().length) {
+                ULog.w(TAG, "onProductMotorsVersionChanged: motor index out of range (" + motor + "), ignoring");
+                return;
+            }
             mCopterMotors.updateMotorDetail(CopterMotors.Motor.values()[motor], type, software, hardware);
             mCopterMotors.notifyUpdated();
         }

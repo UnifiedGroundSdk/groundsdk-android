@@ -343,6 +343,7 @@ public class ArsdkEngine extends EngineBase implements RcUsbAccessoryManager {
             switch (droneModel) {
                 case BEBOP_V1:
                 case BEBOP_V2:
+                case BLUEGRASS:
                 case DISCO:
                     return new BebopFamilyDroneController(this, uid, droneModel, name);
                 case ANAFI_4K:

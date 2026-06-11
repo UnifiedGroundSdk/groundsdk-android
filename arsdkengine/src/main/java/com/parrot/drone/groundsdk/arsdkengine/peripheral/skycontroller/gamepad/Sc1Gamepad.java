@@ -251,7 +251,7 @@ public final class Sc1Gamepad extends GamepadControllerBase {
         EnumSet<SkyController3Gamepad.Button> buttons = EnumSet.noneOf(SkyController3Gamepad.Button.class);
         for (SkyController3Gamepad.Button button : SkyController3Gamepad.Button.values()) {
             InputMasks info = InputMasks.of(button);
-            if (info != null && (buttonsMask & info.mButtons) != 0 || (axesMask & info.mAxes) != 0) {
+            if (info != null && ((buttonsMask & info.mButtons) != 0 || (axesMask & info.mAxes) != 0)) {
                 // some of the input's buttons and/or axes are selected, so we consider the input grabbed
                 buttons.add(button);
                 // however warn if the complete set of buttons/axes is not present
@@ -266,7 +266,7 @@ public final class Sc1Gamepad extends GamepadControllerBase {
         EnumSet<SkyController3Gamepad.Axis> axes = EnumSet.noneOf(SkyController3Gamepad.Axis.class);
         for (SkyController3Gamepad.Axis axis : SkyController3Gamepad.Axis.values()) {
             InputMasks info = InputMasks.of(axis);
-            if (info != null && (buttonsMask & info.mButtons) != 0 || (axesMask & info.mAxes) != 0) {
+            if (info != null && ((buttonsMask & info.mButtons) != 0 || (axesMask & info.mAxes) != 0)) {
                 // some of the input's buttons and/or axes are selected, so we consider the input grabbed
                 axes.add(axis);
                 // however warn if the complete set of buttons/axes is not present

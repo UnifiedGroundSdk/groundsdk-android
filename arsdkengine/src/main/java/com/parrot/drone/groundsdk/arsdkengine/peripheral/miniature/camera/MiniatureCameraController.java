@@ -210,7 +210,9 @@ public final class MiniatureCameraController extends DronePeripheralController {
 
         @Override
         public boolean setRecording(@NonNull CameraRecording.Mode mode, @Nullable CameraRecording.Resolution resolution, @Nullable CameraRecording.Framerate framerate, @Nullable CameraRecording.HyperlapseValue hyperlapse) {
-            assert resolution != null;
+            if (resolution == null) {
+                return false;
+            }
 
             switch (resolution) {
                 case RES_720P:
@@ -318,8 +320,9 @@ public final class MiniatureCameraController extends DronePeripheralController {
 
         @Override
         public void onPictureChanged(@Nullable ArsdkFeatureMinidrone.MinicamstatePicturechangedState state, @Nullable ArsdkFeatureMinidrone.MinicamstatePicturechangedResult result) {
-            assert state != null;
-            assert result != null;
+            if (state == null || result == null) {
+                return;
+            }
 
             switch (result) {
                 case SUCCESS:
@@ -354,8 +357,9 @@ public final class MiniatureCameraController extends DronePeripheralController {
 
         @Override
         public void onVideoStateChanged(@Nullable ArsdkFeatureMinidrone.MinicamstateVideostatechangedState state, @Nullable ArsdkFeatureMinidrone.MinicamstateVideostatechangedError error) {
-            assert state != null;
-            assert error != null;
+            if (state == null || error == null) {
+                return;
+            }
 
             switch (state) {
                 case NOTAVAILABLE:
@@ -398,7 +402,9 @@ public final class MiniatureCameraController extends DronePeripheralController {
 
         @Override
         public void onVideoResolutionChanged(@Nullable ArsdkFeatureMinidrone.VideosettingsstateVideoresolutionchangedType type) {
-            assert type != null;
+            if (type == null) {
+                return;
+            }
             final CameraRecording.Resolution res = ResolutionAdapter.from(type);
             mCameraCore.recording().updateMode(CameraRecording.Mode.STANDARD);
             mCameraCore.recording().updateResolution(res);
@@ -410,8 +416,9 @@ public final class MiniatureCameraController extends DronePeripheralController {
     private final ArsdkFeatureMinidrone.MediaRecordState.Callback mMediaRecordStateCallbacks = new ArsdkFeatureMinidrone.MediaRecordState.Callback() {
         @Override
         public void onPictureStateChangedV2(@Nullable ArsdkFeatureMinidrone.MediarecordstatePicturestatechangedv2State state, @Nullable ArsdkFeatureMinidrone.MediarecordstatePicturestatechangedv2Error error) {
-            assert state != null;
-            assert error != null;
+            if (state == null || error == null) {
+                return;
+            }
 
             ArsdkFeatureMinidrone.MinicamstatePicturechangedState camstate;
             ArsdkFeatureMinidrone.MinicamstatePicturechangedResult camresult;

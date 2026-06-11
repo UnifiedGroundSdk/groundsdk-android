@@ -132,7 +132,7 @@ public class MiniatureGps extends DroneInstrumentController implements SystemLoc
 
     @Override
     protected void onForgetting() {
-        deviceDict.clear();
+        deviceDict.clear().commit();
         gpsCore.unpublish();
     }
 
@@ -215,7 +215,9 @@ public class MiniatureGps extends DroneInstrumentController implements SystemLoc
             final double heading = calculateAngle(x, y, 0, 0);
 
             final double[] results = computeOffsetOrigin(referenceLocation.getLatitude(), referenceLocation.getLongitude(), distance, heading);
-            assert results != null;
+            if (results == null) {
+                return;
+            }
 
             if (Double.compare(results[0], VALUE_UNAVAILABLE) != 0
                 && Double.compare(results[1], VALUE_UNAVAILABLE) != 0) {

@@ -43,9 +43,25 @@ public class BebopLocalRtspServer {
         if (listenerThread.isAlive()) {
             listenerThread.interrupt();
 
+            // Close client sockets before joining so readLine() unblocks in each ClientThread.
+            synchronized (lock) {
+                for (final ClientThread client : clients) {
+                    try {
+                        client.socket.close();
+                    } catch (Exception e) {
+                        logEvent(Log.WARN, "unable to close client socket on stop: " + e.getMessage(), e);
+                    }
+                }
+            }
+
             try {
                 listenerThread.server.close();
-                listenerThread.join();
+            } catch (Exception e) {
+                logEvent(Log.WARN, "unable to close server socket: " + e.getMessage(), e);
+            }
+
+            try {
+                listenerThread.join(5000);
             } catch (Exception e) {
                 logEvent(Log.WARN, "unable to clean up listener: " + e.getMessage(), e);
             }
@@ -177,7 +193,7 @@ public class BebopLocalRtspServer {
                     }
 
                     if (inputLine.startsWith("PAUSE")) {
-                        while (!inputLine.equals("\r\n")) {
+                        while (inputLine != null && inputLine.length() > 0) {
                             logEvent(inputLine);
                             inputLine = is.readLine();
                         }
@@ -365,8 +381,15 @@ public class BebopLocalRtspServer {
                     if (client.isAlive()) {
                         client.interrupt();
 
+                        // Close the socket before joining so readLine() unblocks immediately.
                         try {
-                            client.join();
+                            client.socket.close();
+                        } catch (Exception e) {
+                            logEvent(Log.WARN, "unable to close client socket on cleanup: " + e.getMessage(), e);
+                        }
+
+                        try {
+                            client.join(5000);
                         } catch (InterruptedException e) {
                             logEvent(Log.WARN, "unable to join client thread: " + e.getMessage(), e);
                         } finally {

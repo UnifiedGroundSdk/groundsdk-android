@@ -45,6 +45,8 @@ import com.parrot.drone.groundsdk.value.DoubleRange;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureCommon;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 /** Radio instrument controller for Miniature (Mambo) family drones. */
@@ -105,12 +107,14 @@ public class MiniatureRadio extends DroneInstrumentController {
     private final ArsdkFeatureCommon.CommonState.Callback mCommonStateCallback = new ArsdkFeatureCommon.CommonState.Callback() {
         @Override
         public void onWifiSignalChanged(int rssi) {
-            throw new RuntimeException("onWifiSignalChanged not implemented");
+            // Not used: signal strength is polled from WifiManager in MamboSignalStrengthThread.
+            Log.w("MiniatureRadio", "onWifiSignalChanged ignored (rssi=" + rssi + ")");
         }
 
         @Override
         public void onLinkSignalQuality(int linkSignalQuality) {
-            throw new RuntimeException("onLinkSignalQuality not implemented");
+            // Not used: link quality is derived from RSSI in MamboSignalStrengthThread.
+            Log.w("MiniatureRadio", "onLinkSignalQuality ignored (quality=" + linkSignalQuality + ")");
         }
     };
 

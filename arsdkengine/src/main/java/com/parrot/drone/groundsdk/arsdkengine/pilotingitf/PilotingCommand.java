@@ -50,7 +50,7 @@ import androidx.annotation.NonNull;
 public final class PilotingCommand {
 
     /** Piloting HoverLock feature */
-    private boolean mWithHoverLock = false;
+    private volatile boolean mWithHoverLock = false;
 
     /** Piloting command common roll value. */
     private volatile int mRoll;

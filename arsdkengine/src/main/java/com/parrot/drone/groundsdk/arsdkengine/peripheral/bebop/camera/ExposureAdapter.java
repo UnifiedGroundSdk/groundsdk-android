@@ -104,7 +104,7 @@ final class ExposureAdapter {
             return CameraEvCompensation.EV_2_33;
         }
         if (exposure <= 2.67) {
-            return CameraEvCompensation.EV_MINUS_2_67;
+            return CameraEvCompensation.EV_2_67;
         }
 
         return CameraEvCompensation.EV_3;

@@ -46,7 +46,7 @@ import com.parrot.drone.groundsdk.arsdkengine.instrument.miniature.MiniatureRadi
 import com.parrot.drone.groundsdk.arsdkengine.instrument.miniature.MiniatureSpeedometer;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.AnafiLeds;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.AnafiSystemInfo;
-import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.camera.AnafiAntiFlicker;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.camera.MiniatureAntiFlicker;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.wifi.AnafiWifiAccessPoint;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.DebugDevToolbox;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SensorsState;
@@ -122,7 +122,7 @@ public class MiniatureFamilyDroneController extends DroneController {
 //                HttpFlightLogDownloader.create(this),
                 new AnafiWifiAccessPoint(this),
                 new MiniatureCameraController(this),
-                new AnafiAntiFlicker(this),
+                new MiniatureAntiFlicker(this),
 //                new BebopGimbal(this),
 //                new AnafiTargetTracker(this),
 //                new AnafiPreciseHome(this),
