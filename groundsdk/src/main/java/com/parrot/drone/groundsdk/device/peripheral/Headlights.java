@@ -30,42 +30,49 @@
  *
  */
 
-package com.parrot.drone.groundsdk.arsdkengine.pilotingitf.miniature;
-
-import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.PilotingItfActivationController;
-import com.parrot.drone.groundsdk.internal.device.pilotingitf.LookAtPilotingItfCore;
-import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureFollowMe;
-
-import java.util.EnumSet;
+package com.parrot.drone.groundsdk.device.peripheral;
 
 import androidx.annotation.NonNull;
 
-/** LookAt piloting interface controller for Anafi family drones. */
-public class AnafiLookAtPilotingItf extends AnafiTrackingPilotingItfBase {
+import com.parrot.drone.groundsdk.Ref;
+import com.parrot.drone.groundsdk.device.Drone;
+import com.parrot.drone.groundsdk.value.IntSetting;
 
-    /** Piloting interface for which this object is the backend. */
-    @NonNull
-    private final LookAtPilotingItfCore mPilotingItf;
+/**
+ * Headlights peripheral interface.
+ * <p>
+ * This peripheral exposes the front headlight LEDs on drones that carry the LED accessory
+ * (e.g. Mambo with the LED gun/cannon accessory). Both left and right LED intensities are
+ * independently controllable in the range 0–255.
+ * <p>
+ * This peripheral is only published once a {@code HeadlightsState.intensityChanged} event
+ * has been received from the drone, confirming the capability is present.
+ * <p>
+ * This peripheral can be obtained from a {@link Drone drone} using:
+ * <pre>{@code drone.getPeripheral(Headlights.class)}</pre>
+ *
+ * @see Drone#getPeripheral(Class)
+ * @see Drone#getPeripheral(Class, Ref.Observer)
+ */
+public interface Headlights extends Peripheral {
 
     /**
-     * Constructor.
+     * Gives access to the left headlight intensity setting.
+     * <p>
+     * Valid range is 0 (off) through 255 (full brightness).
      *
-     * @param activationController activation controller that owns this piloting interface controller
+     * @return left headlight intensity setting
      */
-    public AnafiLookAtPilotingItf(@NonNull PilotingItfActivationController activationController) {
-        super(activationController, EnumSet.of(ArsdkFeatureFollowMe.Mode.LOOK_AT));
-        mPilotingItf = new LookAtPilotingItfCore(mComponentStore, new Backend());
-    }
-
-    @Override
-    public void requestActivation() {
-        super.requestActivation();
-        sendCommand(ArsdkFeatureFollowMe.encodeStart(ArsdkFeatureFollowMe.Mode.LOOK_AT));
-    }
-
     @NonNull
-    @Override
-    public LookAtPilotingItfCore getPilotingItf() {
-        return mPilotingItf;
-    }
+    IntSetting leftIntensity();
+
+    /**
+     * Gives access to the right headlight intensity setting.
+     * <p>
+     * Valid range is 0 (off) through 255 (full brightness).
+     *
+     * @return right headlight intensity setting
+     */
+    @NonNull
+    IntSetting rightIntensity();
 }

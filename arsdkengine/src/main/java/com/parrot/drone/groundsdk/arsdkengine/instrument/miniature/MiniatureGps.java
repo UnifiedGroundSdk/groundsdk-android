@@ -73,6 +73,23 @@ public class MiniatureGps extends DroneInstrumentController implements SystemLoc
     /** Location timestamp setting. */
     private static final StorageEntry<Long> TIMESTAMP_SETTING = StorageEntry.ofLong("timestamp");
 
+    /**
+     * Horizontal accuracy (metres) reported for dead-reckoned positions.
+     * <p>
+     * The Mambo estimates its position by integrating optical-flow and barometer readings from
+     * the takeoff point. Typical drift without a real GPS receiver is several metres; 3 m is a
+     * conservative lower-bound that prevents callers from treating these positions as GPS-quality
+     * fixes.
+     */
+    private static final int DEAD_RECKONED_HORIZONTAL_ACCURACY_M = 3;
+
+    /**
+     * Vertical accuracy (metres) reported for dead-reckoned positions.
+     * <p>
+     * Barometer-based altitude is typically accurate to within 1–2 m in calm conditions;
+     * 2 m is a reasonable conservative bound.
+     */
+    private static final int DEAD_RECKONED_VERTICAL_ACCURACY_M = 2;
 
     /** The GPS from which this object is the backend. */
     @NonNull
@@ -83,7 +100,7 @@ public class MiniatureGps extends DroneInstrumentController implements SystemLoc
     private final PersistentStore.Dictionary deviceDict;
 
     private SystemLocation systemLocation = null;
-    
+
     private Location referenceLocation;
 
     /**
@@ -93,7 +110,7 @@ public class MiniatureGps extends DroneInstrumentController implements SystemLoc
      */
     public MiniatureGps(@NonNull DroneController droneController) {
         super(droneController);
-        
+
         miniatureGps = this;
         this.droneController = droneController;
         deviceDict = mDeviceController.getDeviceDict().getDictionary(SETTINGS_KEY);
@@ -200,76 +217,119 @@ public class MiniatureGps extends DroneInstrumentController implements SystemLoc
     private final ArsdkFeatureMinidrone.NavigationDataState.Callback mNavigationDataStateCallback =
             new ArsdkFeatureMinidrone.NavigationDataState.Callback() {
 
-        /** Value sent by drone when latitude/longitude or altitude are not available. */
-        private static final double VALUE_UNAVAILABLE = 500;
-
         @Override
         public void onDronePosition(float x, float y, int z, int psi, int ts) {
+            // ── Step 1: gate on reference ────────────────────────────────────────
+            // We need a phone GPS fix to anchor the dead-reckoned offset.
+            // Once the first drone-position arrives we stop listening for updates
+            // (the takeoff fix is the one that matters).
             if (systemLocation != null && referenceLocation != null) {
                 systemLocation.disposeMonitor(miniatureGps);
                 systemLocation = null;
-            } else if (referenceLocation == null) return;
-
-            final double altitude = referenceLocation.getAltitude() + (z / 100d);
-            final double distance = Math.hypot(x, y) / 100d;
-            final double heading = calculateAngle(x, y, 0, 0);
-
-            final double[] results = computeOffsetOrigin(referenceLocation.getLatitude(), referenceLocation.getLongitude(), distance, heading);
-            if (results == null) {
+            } else if (referenceLocation == null) {
                 return;
             }
 
-            if (Double.compare(results[0], VALUE_UNAVAILABLE) != 0
-                && Double.compare(results[1], VALUE_UNAVAILABLE) != 0) {
-                int horizontalAccuracy = 1;
-                gpsCore.updateLocation(results[0], results[1])
-                        .updateAltitude(altitude)
-                        .updateHorizontalAccuracy(horizontalAccuracy)
-                        .updateVerticalAccuracy(1)
-                        .notifyUpdated();
-                saveLocation(results[0], results[1]);
-                saveAltitude(altitude);
-                HORIZONTAL_ACCURACY_SETTING.save(deviceDict, 1);
-                VERTICAL_ACCURACY_SETTING.save(deviceDict, 1);
+            // ── Step 2: altitude ─────────────────────────────────────────────────
+            // Protocol: z is in cm, up-positive; reference altitude is in metres.
+            final double altitude = referenceLocation.getAltitude() + (z / 100.0);
+
+            // ── Step 3: horizontal offset in body frame ──────────────────────────
+            // Protocol (minidrone.xml, NavigationDataState.DronePosition):
+            //   x  – forward (rear → front of drone), cm
+            //   y  – left    (right → left of drone), cm
+            //   psi – current yaw relative to takeoff orientation, degrees [-180, 180]
+            //
+            // We treat the takeoff heading as geographic north (H = 0°).  This is
+            // an approximation: without a compass fix at takeoff the absolute north
+            // alignment is unknown, but relative motion tracking is still correct.
+            //
+            // Body → geographic (NED) rotation for H = 0°:
+            //   north_m =  x_m   (drone forward aligns with north at H=0)
+            //   east_m  = -y_m   (drone left is geographic west, so east = −y)
+            //
+            // If a takeoff heading H (degrees CW from north) were available:
+            //   north_m =  x_m * cos(H) + y_m * sin(H)
+            //   east_m  =  x_m * sin(H) - y_m * cos(H)
+            final double x_m = x / 100.0;   // cm → metres
+            final double y_m = y / 100.0;
+
+            // North/east displacement (metres) of drone from takeoff point.
+            final double north_m =  x_m;    // forward = north at H=0
+            final double east_m  = -y_m;    // left    = −east
+
+            // ── Step 4: distance and bearing ────────────────────────────────────
+            // Great-circle bearing FROM takeoff TO drone, clockwise from north.
+            //   atan2(east, north) gives the standard azimuth.
+            final double distance_m = Math.hypot(north_m, east_m);
+            final double bearingDeg = Math.toDegrees(Math.atan2(east_m, north_m));
+
+            // ── Step 5: project onto sphere ──────────────────────────────────────
+            final double[] result = computeOffsetPoint(
+                    referenceLocation.getLatitude(),
+                    referenceLocation.getLongitude(),
+                    distance_m, bearingDeg);
+
+            if (result == null) {
+                return;
             }
+
+            gpsCore.updateLocation(result[0], result[1])
+                    .updateAltitude(altitude)
+                    .updateHorizontalAccuracy(DEAD_RECKONED_HORIZONTAL_ACCURACY_M)
+                    .updateVerticalAccuracy(DEAD_RECKONED_VERTICAL_ACCURACY_M)
+                    .notifyUpdated();
+            saveLocation(result[0], result[1]);
+            saveAltitude(altitude);
+            HORIZONTAL_ACCURACY_SETTING.save(deviceDict, DEAD_RECKONED_HORIZONTAL_ACCURACY_M);
+            VERTICAL_ACCURACY_SETTING.save(deviceDict, DEAD_RECKONED_VERTICAL_ACCURACY_M);
         }
 
-        private double calculateAngle(double x1, double y1, double x2, double y2) {
-            double angle = Math.toDegrees(Math.atan2(x2 - x1, y2 - y1));
-            angle = angle + Math.ceil( -angle / 360 ) * 360;
+        /**
+         * Computes the geographic point that is {@code distanceM} metres away from
+         * {@code (latDeg, lonDeg)} along the initial bearing {@code bearingDeg}
+         * (clockwise from north), using the spherical-Earth approximation.
+         *
+         * @param latDeg     origin latitude in degrees
+         * @param lonDeg     origin longitude in degrees
+         * @param distanceM  distance in metres (must be non-negative)
+         * @param bearingDeg initial bearing in degrees, clockwise from north
+         * @return {@code double[]{latitude, longitude}} in degrees, or {@code null} if
+         *         the computation is geometrically degenerate
+         */
+        private double[] computeOffsetPoint(double latDeg, double lonDeg,
+                double distanceM, double bearingDeg) {
+            // Convert to radians; normalise angular distance to the unit sphere.
+            final double bearingRad = Math.toRadians(bearingDeg);
+            final double latRad = Math.toRadians(latDeg);
+            final double lonRad = Math.toRadians(lonDeg);
+            final double angDist = distanceM / 6_371_009.0; // Earth mean radius, metres
 
-            return angle;
-        }
+            // Standard spherical forward geodesic:
+            //   sin(φ₂) = sin(φ₁)·cos(d) + cos(φ₁)·sin(d)·cos(θ)
+            //   λ₂ = λ₁ + atan2(sin(θ)·sin(d)·cos(φ₁), cos(d)−sin(φ₁)·sin(φ₂))
+            final double sinLat1 = Math.sin(latRad);
+            final double cosLat1 = Math.cos(latRad);
+            final double sinDist = Math.sin(angDist);
+            final double cosDist = Math.cos(angDist);
 
-        private double[] computeOffsetOrigin(double latitude, double longitude, double distance, double heading) {
-            heading = Math.toRadians(heading);
-            distance /= 6371009.0D;
-            double n1 = Math.cos(distance);
-            double n2 = Math.sin(distance) * Math.cos(heading);
-            double n3 = Math.sin(distance) * Math.sin(heading);
-            double n4 = Math.sin(Math.toRadians(latitude));
-            double n12 = n1 * n1;
-            double discriminant = n2 * n2 * n12 + n12 * n12 - n12 * n4 * n4;
-            if (discriminant < 0.0D) {
+            final double sinLat2 = sinLat1 * cosDist + cosLat1 * sinDist * Math.cos(bearingRad);
+            // Clamp for floating-point safety before asin.
+            final double sinLat2c = Math.max(-1.0, Math.min(1.0, sinLat2));
+            final double lat2Rad = Math.asin(sinLat2c);
+
+            final double lon2Rad = lonRad + Math.atan2(
+                    Math.sin(bearingRad) * sinDist * cosLat1,
+                    cosDist - sinLat1 * sinLat2c);
+
+            final double lat2 = Math.toDegrees(lat2Rad);
+            final double lon2 = Math.toDegrees(lon2Rad);
+
+            // Basic sanity: latitude must be within [-90, 90].
+            if (lat2 < -90.0 || lat2 > 90.0) {
                 return null;
-            } else {
-                double b = n2 * n4 + Math.sqrt(discriminant);
-                b /= n1 * n1 + n2 * n2;
-                double a = (n4 - n2 * b) / n1;
-                double fromLatRadians = Math.atan2(a, b);
-                if (fromLatRadians < -1.5707963267948966D || fromLatRadians > 1.5707963267948966D) {
-                    b = n2 * n4 - Math.sqrt(discriminant);
-                    b /= n1 * n1 + n2 * n2;
-                    fromLatRadians = Math.atan2(a, b);
-                }
-
-                if (fromLatRadians >= -1.5707963267948966D && fromLatRadians <= 1.5707963267948966D) {
-                    double fromLngRadians = Math.toRadians(longitude) - Math.atan2(n3, n1 * Math.cos(fromLatRadians) - n2 * Math.sin(fromLatRadians));
-                    return new double[] { Math.toDegrees(fromLatRadians), Math.toDegrees(fromLngRadians) };
-                } else {
-                    return null;
-                }
             }
+            return new double[]{lat2, lon2};
         }
     };
 }

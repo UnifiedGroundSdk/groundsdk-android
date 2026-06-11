@@ -204,6 +204,18 @@ public abstract class DroneController extends DeviceController<DroneCore> {
     }
 
     /**
+     * Retrieves the current piloting command being sent to this drone.
+     * <p>
+     * Instrument controllers may call this to observe PCMD activity without modifying the piloting interface layer.
+     *
+     * @return current {@link PilotingCommand}
+     */
+    @NonNull
+    public final PilotingCommand getPilotingCommand() {
+        return mActivationController.getPilotingCommand();
+    }
+
+    /**
      * Called back when the current piloting command sent to the drone changes.
      *
      * @param pilotingCommand up-to-date piloting command

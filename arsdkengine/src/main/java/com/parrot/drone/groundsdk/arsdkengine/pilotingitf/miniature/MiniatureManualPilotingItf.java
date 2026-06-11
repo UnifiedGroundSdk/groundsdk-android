@@ -334,10 +334,18 @@ public class MiniatureManualPilotingItf extends ActivablePilotingItfController {
      * <li>Updates the component's setting accordingly.</li>
      * </ul>
      *
+     * <p><b>Mambo protocol note:</b> {@code minidrone.xml SpeedSettings} has no command that controls the
+     * angular velocity of pitch/roll (the rate at which the drone tilts).  ARDrone3 has
+     * {@code MaxPitchRollRotationSpeed} for this purpose, but that command does not exist in the Minidrone
+     * feature set.  The only rotation-speed command available on the Mambo is {@code MaxRotationSpeed},
+     * which controls <em>yaw</em> (heading) rotation rate and is already mapped to
+     * {@link #applyMaxYawRotationSpeed}.  Sending {@code MaxRotationSpeed} here would silently overwrite
+     * the yaw setting.  Therefore no firmware command is sent; the value is stored locally and the setting
+     * is updated in the UI, but {@code updating} is {@code false} so the rollback timer is not armed.
+     *
      * @param maxPitchRollVelocity value to apply
      *
-     * @return {@code true} if a command was sent to the device and the component's setting should arm its updating
-     *         flag
+     * @return {@code false} — no firmware command exists for this setting on the Mambo
      */
     private boolean applyMaxPitchRollVelocity(@Nullable Double maxPitchRollVelocity) {
         if (maxPitchRollVelocity == null) {
@@ -347,15 +355,11 @@ public class MiniatureManualPilotingItf extends ActivablePilotingItfController {
             maxPitchRollVelocity = mMaxPitchRollVelocity;
         }
 
-//        boolean updating = !maxPitchRollVelocity.equals(mMaxPitchRollVelocity) && sendCommand(
-//                ArsdkFeatureMinidrone.SpeedSettings.encodeMaxPitchRollRotationSpeed(maxPitchRollVelocity.floatValue()));
-//
-//        mMaxPitchRollVelocity = maxPitchRollVelocity;
-//        mPilotingItf.getMaxPitchRollVelocity()
-//                    .updateValue(maxPitchRollVelocity);
+        mMaxPitchRollVelocity = maxPitchRollVelocity;
+        mPilotingItf.getMaxPitchRollVelocity()
+                    .updateValue(maxPitchRollVelocity);
 
-        boolean updating = true;
-        return updating;
+        return false;
     }
 
     /**

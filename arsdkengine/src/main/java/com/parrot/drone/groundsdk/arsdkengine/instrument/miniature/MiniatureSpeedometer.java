@@ -84,14 +84,23 @@ public class MiniatureSpeedometer extends DroneInstrumentController {
 
                 @Override
                 public void onDroneSpeed(float speedX, float speedY, float speedZ, int ts) {
+                    // minidrone.xml NavigationDataState.DroneSpeed: speed is expressed in the
+                    // horizontal body frame ("similar to NED but with drone heading"):
+                    //   speed_x > 0 when drone moves FORWARD (body x-axis)
+                    //   speed_y > 0 when drone moves RIGHT    (body y-axis)
+                    //   speed_z > 0 when drone moves DOWN     (NED z-axis)
+                    // Forward/right are therefore DIRECT reads (no rotation needed).
+                    // North/east require a single rotation from body frame to NED by yaw:
+                    //   north =  cos(yaw)*speedX - sin(yaw)*speedY
+                    //   east  =  sin(yaw)*speedX + cos(yaw)*speedY
                     double sin = Math.sin(mYaw);
                     double cos = Math.cos(mYaw);
                     mSpeedometer.updateGroundSpeed(Math.sqrt(Math.pow(speedX, 2) + Math.pow(speedY, 2)))
-                                .updateNorthSpeed(speedX)
-                                .updateEastSpeed(speedY)
+                                .updateNorthSpeed(cos * speedX - sin * speedY)
+                                .updateEastSpeed(sin * speedX + cos * speedY)
                                 .updateDownSpeed(speedZ)
-                                .updateForwardSpeed(cos * speedX + sin * speedY)
-                                .updateRightSpeed(-sin * speedX + cos * speedY)
+                                .updateForwardSpeed(speedX)
+                                .updateRightSpeed(speedY)
                                 .notifyUpdated();
                 }
 

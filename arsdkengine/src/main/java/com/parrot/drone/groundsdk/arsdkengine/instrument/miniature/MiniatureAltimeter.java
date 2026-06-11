@@ -78,15 +78,22 @@ public class MiniatureAltimeter extends DroneInstrumentController {
     private final ArsdkFeatureMinidrone.NavigationDataState.Callback mNavigationDataStateCallback =
             new ArsdkFeatureMinidrone.NavigationDataState.Callback() {
 
-                /** Value sent by drone when latitude/longitude or altitude are not available. */
-                private static final double VALUE_UNAVAILABLE = 500;
+                /**
+                 * Sentinel value sent by the drone in DronePosition when dead-reckoned
+                 * position is not available (minidrone.xml NavigationDataState.DronePosition).
+                 * Applies to posx, posy, and posz independently.
+                 */
+                private static final int POSITION_UNAVAILABLE = 500;
 
                 @Override
                 public void onDronePosition(float posx, float posy, int posz, int psi, int ts) {
-                    if (Double.compare(posx, VALUE_UNAVAILABLE) != 0
-                            || (Double.compare(posy, VALUE_UNAVAILABLE) != 0
-                            && Double.compare(posz, VALUE_UNAVAILABLE) != 0)) {
-                        mAltimeter.updateAbsoluteAltitude(posz);
+                    // minidrone.xml NavigationDataState.DronePosition:
+                    //   posz is dead-reckoned altitude relative to takeoff, in CENTIMETRES (i16).
+                    //   The sentinel value 500 indicates the field is unavailable.
+                    //   (Bug a) Convert cm → m by dividing by 100 before passing to the API.
+                    //   (Bug b) Altitude validity depends only on posz; check posz alone.
+                    if (posz != POSITION_UNAVAILABLE) {
+                        mAltimeter.updateAbsoluteAltitude(posz / 100.0);
                     } else {
                         mAltimeter.resetAbsoluteAltitude();
                     }

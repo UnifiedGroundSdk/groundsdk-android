@@ -32,8 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.instrument.miniature;
 
-import android.util.Log;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.instrument.DroneInstrumentController;
 import com.parrot.drone.groundsdk.internal.Maths;
@@ -43,6 +41,7 @@ import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureMinidrone;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.devicecontroller.MiniatureFamilyDroneController.setFromQuaternion2;
 
@@ -56,15 +55,28 @@ public class MiniatureCompass extends DroneInstrumentController implements Syste
     @NonNull
     private final CompassCore compassCore;
 
-    private SystemHeading systemHeading = null;
-    private double referenceHeading = Double.MIN_VALUE;
+    /**
+     * Phone compass heading (degrees, clockwise from geographic north) captured at connect time,
+     * or {@code null} if the {@link SystemHeading} utility is unavailable on this device.
+     * <p>
+     * {@code setFromQuaternion2} yields yaw relative to the NED frame established at drone
+     * startup.  Adding the takeoff heading rotates that NED-relative yaw to geographic north.
+     * Once the first quaternion arrives the monitor is released; only the captured value is kept.
+     */
+    @Nullable
+    private Double referenceHeading;
+
+    /** {@code true} once {@link SystemHeading} has been disposed and may not be used. */
+    private boolean systemHeadingDisposed;
+
+    @Nullable
+    private SystemHeading systemHeading;
 
     /**
      * Constructor.
      *
      * @param droneController The drone controller that owns this component controller.
      */
-
     public MiniatureCompass(@NonNull DroneController droneController) {
         super(droneController);
 
@@ -75,26 +87,25 @@ public class MiniatureCompass extends DroneInstrumentController implements Syste
 
     @Override
     public void onConnected() {
-        try {
-            systemHeading = droneController.getEngine().getUtilityOrThrow(SystemHeading.class);
+        systemHeading = droneController.getEngine().getUtility(SystemHeading.class);
+        if (systemHeading != null) {
             systemHeading.monitorWith(miniatureCompass);
-        } catch (AssertionError ex) {
-            Log.w("MiniatureCompass", "unable to acticate system heading: " + ex.getMessage(), ex);
         }
+        // Publish regardless; heading will be updated on every quaternion event.
         compassCore.publish();
     }
 
     @Override
     public void onHeadingChanged(double heading) {
+        // Keep updating until the first quaternion arrives and we dispose the monitor.
         referenceHeading = heading;
     }
 
     @Override
     public void onDisconnected() {
-        if (systemHeading != null) {
-            systemHeading.disposeMonitor(miniatureCompass);
-        }
-
+        disposeSystemHeading();
+        referenceHeading = null;
+        systemHeadingDisposed = false;
         compassCore.unpublish();
     }
 
@@ -105,29 +116,43 @@ public class MiniatureCompass extends DroneInstrumentController implements Syste
         }
     }
 
-    /** Callbacks called when a command of the feature ArsdkFeatureArdrone3.PilotingState is decoded. */
+    /** Releases the {@link SystemHeading} monitor if it has not already been released. */
+    private void disposeSystemHeading() {
+        if (!systemHeadingDisposed && systemHeading != null) {
+            systemHeading.disposeMonitor(miniatureCompass);
+            systemHeadingDisposed = true;
+            systemHeading = null;
+        }
+    }
+
+    /** Callbacks called when a command of the feature NavigationDataState is decoded. */
     private final ArsdkFeatureMinidrone.NavigationDataState.Callback mNavigationDataStateCallback =
             new ArsdkFeatureMinidrone.NavigationDataState.Callback() {
 
                 @Override
                 public void onDroneQuaternion(float qW, float qX, float qY, float qZ, int ts) {
-                    if (systemHeading != null && referenceHeading != Double.MIN_VALUE) {
-                        systemHeading.disposeMonitor(miniatureCompass);
-                        systemHeading = null;
-                    } else if (referenceHeading == Double.MIN_VALUE) return;
+                    // Stop tracking the phone compass once quaternions are flowing; keep
+                    // whatever heading was last reported as the takeoff reference.
+                    disposeSystemHeading();
 
-                    final double[] results = setFromQuaternion2(qW, qX, qY, qZ);
+                    // setFromQuaternion2 returns [pitch, roll, yaw] where yaw is the
+                    // drone's heading relative to the NED frame fixed at startup (radians).
+                    final double[] euler = setFromQuaternion2(qW, qX, qY, qZ);
 
-                    final double localYaw = Maths.radiansToBoundedDegrees(results[2]);
-                    final double worldYaw;
+                    // Convert NED-relative yaw to degrees in [0, 360).
+                    final double nedYawDeg = Maths.radiansToBoundedDegrees(euler[2]);
 
-                    if (referenceHeading != Double.MIN_VALUE) {
-                        worldYaw = (localYaw + referenceHeading) % 360;
+                    // Rotate to geographic north if a phone compass reference is available.
+                    // Without it we publish the NED-relative yaw; relative motion is still
+                    // correct even if the absolute north offset is unknown.
+                    final double geographicYawDeg;
+                    if (referenceHeading != null) {
+                        geographicYawDeg = (nedYawDeg + referenceHeading) % 360.0;
                     } else {
-                        worldYaw  = localYaw;
+                        geographicYawDeg = nedYawDeg;
                     }
 
-                    compassCore.updateHeading(worldYaw).notifyUpdated();
+                    compassCore.updateHeading(geographicYawDeg).notifyUpdated();
                 }
             };
 }

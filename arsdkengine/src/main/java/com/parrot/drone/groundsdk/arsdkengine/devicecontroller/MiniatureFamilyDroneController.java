@@ -52,14 +52,17 @@ import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.DebugDevToolbox;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SensorsState;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.FirmwareUpdaterProtocol;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.UpdaterController;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniatureHeadlights;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniatureMotors;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniaturePilotingModePeripheral;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniatureRemovableUserStorage;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniatureStreamServer;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniatureUsbAccessoryPeripheral;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.camera.MiniatureCameraController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.media.MiniatureMediaStore;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.PilotingCommand;
+import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.miniature.MiniatureAnimationPilotingItf;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.miniature.MiniatureManualPilotingItf;
-import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.miniature.MiniatureReturnHomePilotingItf;
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.internal.GroundSdkConfig;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureCommon;
@@ -91,7 +94,7 @@ public class MiniatureFamilyDroneController extends DroneController {
         registerComponentControllers(
                 // always active piloting interfaces
                 // non-default piloting interfaces
-                new MiniatureReturnHomePilotingItf(mActivationController),
+                new MiniatureAnimationPilotingItf(this),
                 // instruments
                 new MiniatureAlarms(this),
                 new MiniatureAltimeter(this),
@@ -112,6 +115,8 @@ public class MiniatureFamilyDroneController extends DroneController {
 
 //                new AnafiBeeper(this),
                 new MiniatureMotors(this),
+                new MiniaturePilotingModePeripheral(this),
+                new MiniatureUsbAccessoryPeripheral(this),
 //                new AnafiGeofence(this),
                 new MiniatureMediaStore(this),
                 new MiniatureRemovableUserStorage(this),
@@ -128,7 +133,8 @@ public class MiniatureFamilyDroneController extends DroneController {
 //                new AnafiPreciseHome(this),
 //                new AnafiThermalControl(this),
                 new MiniatureStreamServer(this),
-                new AnafiLeds(this)
+                new AnafiLeds(this),
+                new MiniatureHeadlights(this)
 //                new AnafiPilotingControl(this)
         );
     }

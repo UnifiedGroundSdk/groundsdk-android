@@ -101,6 +101,19 @@ public class PilotingItfActivationController {
     }
 
     /**
+     * Retrieves the current piloting command being sent to the drone.
+     * <p>
+     * Used by instrument controllers that need to observe PCMD activity (e.g. PCMD-inference for flying-state
+     * estimation on firmware that never sends FLYING after HOVERING).
+     *
+     * @return current {@link PilotingCommand}
+     */
+    @NonNull
+    public final PilotingCommand getPilotingCommand() {
+        return mPilotingCommandEncoder.getPilotingCommand();
+    }
+
+    /**
      * Activates the piloting interface of the given controller.
      *
      * @param pilotingItf piloting interface controller whose interface must be activated
