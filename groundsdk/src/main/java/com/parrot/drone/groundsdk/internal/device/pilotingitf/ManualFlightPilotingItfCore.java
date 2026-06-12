@@ -46,15 +46,15 @@ import androidx.annotation.NonNull;
 import static com.parrot.drone.groundsdk.internal.value.IntegerRangeCore.SIGNED_PERCENTAGE;
 
 /**
- * Core class for ManualCopterPilotingItf.
+ * Core class for ManualFlightPilotingItf.
  */
 public final class ManualFlightPilotingItfCore extends ActivablePilotingItfCore implements ManualFlightPilotingItf {
 
-    /** Description of ManualCopterPilotingItf. */
+    /** Description of ManualFlightPilotingItf. */
     private static final ComponentDescriptor<PilotingItf, ManualFlightPilotingItf> DESC =
             ComponentDescriptor.of(ManualFlightPilotingItf.class);
 
-    /** Backend of a ManualCopterPilotingItfCore which handles the messages. */
+    /** Backend of a ManualFlightPilotingItfCore which handles the messages. */
     public interface Backend extends ActivablePilotingItfCore.Backend {
 
         /**

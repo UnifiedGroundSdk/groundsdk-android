@@ -46,7 +46,7 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** ManualCopter piloting interface controller for Anafi family drones. */
+/** Manual flight piloting interface controller for Anafi family drones. */
 public class AnafiManualPilotingItf extends ActivablePilotingItfController {
 
     /** Key used to access preset and range dictionaries for this piloting interface settings. */
@@ -691,7 +691,7 @@ public class AnafiManualPilotingItf extends ActivablePilotingItfController {
                 }
             };
 
-    /** Backend of ManualCopterPilotingItfCore implementation. */
+    /** Backend of ManualFlightPilotingItfCore implementation. */
     private final class Backend extends ActivablePilotingItfController.Backend
             implements ManualFlightPilotingItfCore.Backend {
 

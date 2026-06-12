@@ -42,10 +42,12 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
 /**
- * Manual piloting interface for copters.
+ * Manual flight piloting interface for drones.
+ * <p>
+ * Supports all manually piloted drone types, including copters and fixed-wing drones such as the Disco.
  * <p>
  * This piloting interface can be obtained from a {@link Drone drone} using:
- * <pre>{@code drone.getPilotingItf(ManualCopterPilotingItf.class)}</pre>
+ * <pre>{@code drone.getPilotingItf(ManualFlightPilotingItf.class)}</pre>
  *
  * @see Drone#getPilotingItf(Class)
  * @see Drone#getPilotingItf(Class, Ref.Observer)

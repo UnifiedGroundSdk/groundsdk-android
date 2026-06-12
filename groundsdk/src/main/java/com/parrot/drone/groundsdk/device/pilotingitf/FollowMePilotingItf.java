@@ -229,7 +229,7 @@ public interface FollowMePilotingItf extends PilotingItf, Activable {
      * <p>
      * The drone tries to both conform to the requested pitch command and keep directed towards the target.
      * <p>
-     * {@code value} is expressed as a signed percentage of the {@link ManualCopterPilotingItf#getMaxPitchRoll() max
+     * {@code value} is expressed as a signed percentage of the {@link ManualFlightPilotingItf#getMaxPitchRoll() max
      * pitch/roll setting}, in range [-100, 100]. <br>
      * -100 corresponds to a pitch angle of max pitch/roll towards ground (drone will fly forward), 100 corresponds to
      * a pitch angle of max pitch/roll towards sky (copter will fly backward).
@@ -246,7 +246,7 @@ public interface FollowMePilotingItf extends PilotingItf, Activable {
      * <p>
      * The drone tries to both conform to the requested roll command and keep directed towards the target.
      * <p>
-     * {@code value} is expressed as a signed percentage of the {@link ManualCopterPilotingItf#getMaxPitchRoll() max
+     * {@code value} is expressed as a signed percentage of the {@link ManualFlightPilotingItf#getMaxPitchRoll() max
      * pitch/roll setting}, in range [-100, 100]. <br>
      * -100 corresponds to a roll angle of max pitch/roll to the left (copter will fly left), 100 corresponds to a roll
      * angle of max pitch/roll to the right (copter will fly right).
@@ -256,7 +256,7 @@ public interface FollowMePilotingItf extends PilotingItf, Activable {
      *
      * @param roll the new pitch roll to set
      *
-     * @see ManualCopterPilotingItf#getMaxPitchRoll()
+     * @see ManualFlightPilotingItf#getMaxPitchRoll()
      */
     void setRoll(@IntRange(from = -100, to = 100) int roll);
 
@@ -266,12 +266,12 @@ public interface FollowMePilotingItf extends PilotingItf, Activable {
      * The drone tries to both conform to the requested vertical speed command and keep directed towards the target.
      * <p>
      * {@code value} is expressed as as a signed percentage of the
-     * {@link ManualCopterPilotingItf#getMaxVerticalSpeed() max vertical speed setting}, in range [-100, 100]. <br>
+     * {@link ManualFlightPilotingItf#getMaxVerticalSpeed() max vertical speed setting}, in range [-100, 100]. <br>
      * -100 corresponds to max vertical speed towards ground,100 corresponds to max vertical speed towards sky.
      *
      * @param verticalSpeed the new vertical speed value to set
      *
-     * @see ManualCopterPilotingItf#getMaxVerticalSpeed()
+     * @see ManualFlightPilotingItf#getMaxVerticalSpeed()
      */
     void setVerticalSpeed(@IntRange(from = -100, to = 100) int verticalSpeed);
 }
