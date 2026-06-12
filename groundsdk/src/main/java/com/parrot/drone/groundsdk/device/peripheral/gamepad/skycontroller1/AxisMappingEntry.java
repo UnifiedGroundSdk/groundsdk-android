@@ -30,21 +30,19 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1;
+
+import androidx.annotation.NonNull;
 
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisMappableAction;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Set;
-
-import androidx.annotation.NonNull;
-
 /**
- * A mapping entry that defines an {@link AxisMappableAction} to be triggered when the gamepad inputs produce
- * an {@link AxisEvent}, optionally in conjunction with a specific set of {@link ButtonEvent button events}
- * in the {@link ButtonEvent.State#PRESSED pressed} state.
+ * A mapping entry that defines an {@link AxisMappableAction} to be triggered when the gamepad produces
+ * an {@link AxisEvent}.
+ * <p>
+ * SkyController 1 does not support chord modifiers (button+axis combos) — each axis maps directly to
+ * one action via the {@code skyctrl.AxisMappings.SetAxisMapping} protocol.
  */
 public final class AxisMappingEntry extends MappingEntry {
 
@@ -56,26 +54,19 @@ public final class AxisMappingEntry extends MappingEntry {
     @NonNull
     private final AxisEvent mAxisEvent;
 
-    /** Set of button events that triggers the action when in the {@link ButtonEvent.State#PRESSED pressed} state. */
-    @NonNull
-    private final Set<ButtonEvent> mButtonEvents;
-
     /**
      * Constructor.
      *
-     * @param droneModel   drone model onto which the entry should apply
-     * @param action       action to be triggered
-     * @param axisEvent    axis event that triggers the action
-     * @param buttonEvents button event set that triggers the action
+     * @param droneModel drone model onto which the entry should apply (use {@link Drone.Model#UNKNOWN} for SC1)
+     * @param action     action to be triggered
+     * @param axisEvent  axis event that triggers the action
      */
-    public AxisMappingEntry(@NonNull Drone.Model droneModel, @NonNull AxisMappableAction action,
-                            @NonNull AxisEvent axisEvent,
-                            @NonNull EnumSet<ButtonEvent> buttonEvents) {
+    public AxisMappingEntry(@NonNull Drone.Model droneModel,
+                            @NonNull AxisMappableAction action,
+                            @NonNull AxisEvent axisEvent) {
         super(Type.AXIS_MAPPING, droneModel);
         mAction = action;
         mAxisEvent = axisEvent;
-        mButtonEvents = buttonEvents.isEmpty() ? Collections.emptySet()
-                : Collections.unmodifiableSet(EnumSet.copyOf(buttonEvents));
     }
 
     /**
@@ -96,18 +87,6 @@ public final class AxisMappingEntry extends MappingEntry {
     @NonNull
     public AxisEvent getAxisEvent() {
         return mAxisEvent;
-    }
-
-    /**
-     * Gets the set of button events that triggers the action when pressed.
-     * <p>
-     * The application gets a read only view of those events, which cannot be modified.
-     *
-     * @return set of button event that triggers the action
-     */
-    @NonNull
-    public Set<ButtonEvent> getButtonEvents() {
-        return mButtonEvents;
     }
 
     @Override

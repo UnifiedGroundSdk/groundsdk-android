@@ -30,19 +30,23 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
-
-import com.parrot.drone.groundsdk.device.Drone;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1;
 
 import androidx.annotation.NonNull;
 
+import com.parrot.drone.groundsdk.device.Drone;
+
 /**
- * Defines a mapping entry.
+ * Defines a mapping entry for the SkyController 1 gamepad.
  * <p>
- * A mapping entry collects the drone model onto which the entry should apply, as well as the {@link Type type} of the
- * entry which defines the concrete subclass of the entry.
+ * A mapping entry collects the drone model onto which the entry should apply, as well as the
+ * {@link Type type} of the entry which defines the concrete subclass.
  * <p>
- * Application cannot instantiate this class directly, and must use ether {@link ButtonsMappingEntry} or
+ * For SkyController 1, the drone model is always {@link Drone.Model#UNKNOWN} because the SC1 firmware
+ * does not distinguish drone models in its mapping protocol. Entries are keyed by their action — two
+ * entries with the same action and drone model are considered equal.
+ * <p>
+ * Applications cannot instantiate this class directly; use either {@link ButtonsMappingEntry} or
  * {@link AxisMappingEntry} depending on the desired entry type.
  */
 public abstract class MappingEntry {
@@ -53,14 +57,14 @@ public abstract class MappingEntry {
     public enum Type {
 
         /**
-         * Entry is actually a {@link ButtonsMappingEntry} and can be safely casted as such.
+         * Entry is actually a {@link ButtonsMappingEntry} and can be safely cast as such.
          *
          * @see #as(Class)
          */
         BUTTONS_MAPPING,
 
         /**
-         * Entry is actually a {@link AxisMappingEntry} and can be safely casted as such.
+         * Entry is actually an {@link AxisMappingEntry} and can be safely cast as such.
          *
          * @see #as(Class)
          */
@@ -71,7 +75,7 @@ public abstract class MappingEntry {
     @NonNull
     private final Type mType;
 
-    /** Associated drone model. */
+    /** Associated drone model. Always {@link Drone.Model#UNKNOWN} for SC1. */
     @NonNull
     private final Drone.Model mDroneModel;
 
@@ -79,7 +83,7 @@ public abstract class MappingEntry {
      * Constructor.
      *
      * @param type       type of the entry
-     * @param droneModel drone model onto which the entry should apply
+     * @param droneModel drone model onto which the entry should apply (use {@link Drone.Model#UNKNOWN} for SC1)
      */
     MappingEntry(@NonNull Type type, @NonNull Drone.Model droneModel) {
         mType = type;
@@ -98,8 +102,10 @@ public abstract class MappingEntry {
 
     /**
      * Gets the associated drone model.
+     * <p>
+     * For SkyController 1 this is always {@link Drone.Model#UNKNOWN}.
      *
-     * @return drone model onto which the entry should apply
+     * @return drone model onto which the entry applies
      */
     @NonNull
     public final Drone.Model getDroneModel() {
@@ -107,16 +113,18 @@ public abstract class MappingEntry {
     }
 
     /**
-     * Cast the entry to the specified subtype.
+     * Casts the entry to the specified subtype.
      * <p>
-     * Application should refer to the entry {@link Type type} to discover the proper subclass of the entry
+     * Applications should refer to the entry {@link Type type} to discover the proper subclass before
+     * calling this method.
      *
      * @param entryClass entry subclass to cast to
      * @param <ENTRY>    type of entry class
      *
-     * @return the entry instance, casted as requested.
+     * @return the entry instance, cast as requested
      *
-     * @throws IllegalArgumentException in case the entry cannot be casted to the specified subclass
+     * @throws IllegalArgumentException if the entry cannot be cast to the specified subclass
+     *
      * @see ButtonsMappingEntry
      * @see AxisMappingEntry
      */

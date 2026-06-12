@@ -30,57 +30,77 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
-
-import com.parrot.drone.groundsdk.device.peripheral.SkyController3Gamepad;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisInterpolator;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
+import com.parrot.drone.groundsdk.device.peripheral.SkyController1Gamepad;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisInterpolator;
+
 /**
- * An event that may be produced by a gamepad {@link SkyController3Gamepad.Axis axis} input.
+ * An event that may be produced by a gamepad {@link SkyController1Gamepad.Axis axis} input.
  * <p>
- * The corresponding input has an axis behavior, i.e. it has a position in some range, and, when grabbed, an event is
- * sent each time that position changes, along with the current position value in a [-100, 100] range.
+ * The corresponding input has an axis behavior, i.e. it has a position in some range, and, when grabbed,
+ * an event is sent each time that position changes, along with the current position value in a
+ * [-100, 100] range.
  * <p>
- * Note that received event values have been transformed by the {@link AxisInterpolator interpolator} currently set on
- * the corresponding axis.
+ * Note that received event values are transformed by the {@link AxisInterpolator interpolator} currently
+ * set on the corresponding axis.
+ * <p>
+ * <strong>Note:</strong> SkyController 1 does not support input grab — there is no grab command in the
+ * skyctrl protocol. In practice this listener will never be called by the current SC1 engine. These
+ * types are retained for API symmetry with SC2/SC3 and for future firmware compatibility.
  */
 public enum AxisEvent {
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#LEFT_STICK_HORIZONTAL horizontal axis on left stick}
-     * is moved.
+     * Event sent when the {@link SkyController1Gamepad.Axis#TOP_LEFT_HORIZONTAL top-left mini-joystick
+     * horizontal axis} is moved.
      */
-    LEFT_STICK_HORIZONTAL,
+    TOP_LEFT_HORIZONTAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#LEFT_STICK_VERTICAL vertical axis on left stick} is moved.
+     * Event sent when the {@link SkyController1Gamepad.Axis#TOP_LEFT_VERTICAL top-left mini-joystick
+     * vertical axis} is moved.
      */
-    LEFT_STICK_VERTICAL,
+    TOP_LEFT_VERTICAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_STICK_HORIZONTAL horizontal axis on right stick}
-     * is moved.
+     * Event sent when the {@link SkyController1Gamepad.Axis#RIGHT_STICK_HORIZONTAL right main stick
+     * horizontal axis} is moved.
      */
     RIGHT_STICK_HORIZONTAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_STICK_VERTICAL vertical axis on right stick}
-     * is moved.
+     * Event sent when the {@link SkyController1Gamepad.Axis#RIGHT_STICK_VERTICAL right main stick
+     * vertical axis} is moved.
      */
     RIGHT_STICK_VERTICAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#LEFT_SLIDER left slider} is moved.
+     * Event sent when the {@link SkyController1Gamepad.Axis#LEFT_STICK_HORIZONTAL left main stick
+     * horizontal axis} is moved.
      */
-    LEFT_SLIDER,
+    LEFT_STICK_HORIZONTAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_SLIDER right slider} is moved.
+     * Event sent when the {@link SkyController1Gamepad.Axis#LEFT_STICK_VERTICAL left main stick
+     * vertical axis} is moved.
      */
-    RIGHT_SLIDER;
+    LEFT_STICK_VERTICAL,
+
+    /**
+     * Event sent when the {@link SkyController1Gamepad.Axis#TOP_RIGHT_HORIZONTAL top-right mini-joystick
+     * horizontal axis} is moved.
+     */
+    TOP_RIGHT_HORIZONTAL,
+
+    /**
+     * Event sent when the {@link SkyController1Gamepad.Axis#TOP_RIGHT_VERTICAL top-right mini-joystick
+     * vertical axis} is moved.
+     */
+    TOP_RIGHT_VERTICAL;
 
     /**
      * Receives axis events sent from the remote control when a corresponding input is grabbed.

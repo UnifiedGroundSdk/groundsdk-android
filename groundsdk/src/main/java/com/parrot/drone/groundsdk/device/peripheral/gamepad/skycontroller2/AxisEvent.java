@@ -30,18 +30,18 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller2;
 
-import com.parrot.drone.groundsdk.device.peripheral.SkyController3Gamepad;
+import com.parrot.drone.groundsdk.device.peripheral.SkyController2Gamepad;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisInterpolator;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
 /**
- * An event that may be produced by a gamepad {@link SkyController3Gamepad.Axis axis} input.
+ * An event that may be produced by a gamepad {@link SkyController2Gamepad.Axis axis} input.
  * <p>
- * The corresponding input has an axis behavior, i.e. it has a position in some range, and, when grabbed, an event is
+ * The corresponding input has an axis behaviour, i.e. it has a position in some range, and, when grabbed, an event is
  * sent each time that position changes, along with the current position value in a [-100, 100] range.
  * <p>
  * Note that received event values have been transformed by the {@link AxisInterpolator interpolator} currently set on
@@ -50,35 +50,38 @@ import androidx.annotation.NonNull;
 public enum AxisEvent {
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#LEFT_STICK_HORIZONTAL horizontal axis on left stick}
-     * is moved.
+     * Event sent when the {@link SkyController2Gamepad.Axis#LEFT_STICK_HORIZONTAL left stick horizontal axis}
+     * is moved. Corresponds to mapper MASK_AXIS_0.
      */
     LEFT_STICK_HORIZONTAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#LEFT_STICK_VERTICAL vertical axis on left stick} is moved.
+     * Event sent when the {@link SkyController2Gamepad.Axis#LEFT_STICK_VERTICAL left stick vertical axis}
+     * is moved. Corresponds to mapper MASK_AXIS_1.
      */
     LEFT_STICK_VERTICAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_STICK_HORIZONTAL horizontal axis on right stick}
-     * is moved.
+     * Event sent when the {@link SkyController2Gamepad.Axis#RIGHT_STICK_HORIZONTAL right stick horizontal axis}
+     * is moved. Corresponds to mapper MASK_AXIS_2.
      */
     RIGHT_STICK_HORIZONTAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_STICK_VERTICAL vertical axis on right stick}
-     * is moved.
+     * Event sent when the {@link SkyController2Gamepad.Axis#RIGHT_STICK_VERTICAL right stick vertical axis}
+     * is moved. Corresponds to mapper MASK_AXIS_3.
      */
     RIGHT_STICK_VERTICAL,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#LEFT_SLIDER left slider} is moved.
+     * Event sent when the {@link SkyController2Gamepad.Axis#LEFT_SLIDER left slider} is moved.
+     * Corresponds to mapper MASK_AXIS_4.
      */
     LEFT_SLIDER,
 
     /**
-     * Event sent when the {@link SkyController3Gamepad.Axis#RIGHT_SLIDER right slider} is moved.
+     * Event sent when the {@link SkyController2Gamepad.Axis#RIGHT_SLIDER right slider} is moved.
+     * Corresponds to mapper MASK_AXIS_5.
      */
     RIGHT_SLIDER;
 

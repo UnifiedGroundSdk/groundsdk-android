@@ -33,25 +33,28 @@
 package com.parrot.drone.groundsdk.arsdkengine.peripheral.skycontroller.gamepad;
 
 import android.annotation.SuppressLint;
-import android.util.LongSparseArray;
+import android.util.Log;
 import android.util.SparseArray;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.RCController;
 import com.parrot.drone.groundsdk.device.Drone;
-import com.parrot.drone.groundsdk.device.peripheral.SkyController3Gamepad;
+import com.parrot.drone.groundsdk.device.peripheral.SkyController1Gamepad;
 import com.parrot.drone.groundsdk.device.peripheral.VirtualGamepad;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisInterpolator;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.AxisMappableAction;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.ButtonsMappableAction;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3.AxisEvent;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3.AxisMappingEntry;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3.ButtonEvent;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3.ButtonsMappingEntry;
-import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller3.MappingEntry;
-import com.parrot.drone.groundsdk.internal.device.peripheral.gamepad.SkyController3GamepadCore;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1.AxisEvent;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1.AxisMappingEntry;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1.ButtonEvent;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1.ButtonsMappingEntry;
+import com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1.MappingEntry;
+import com.parrot.drone.groundsdk.internal.device.peripheral.gamepad.SkyController1GamepadCore;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureSkyctrl;
+import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 import com.parrot.drone.sdkcore.ulog.ULog;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -65,29 +68,43 @@ import androidx.annotation.VisibleForTesting;
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_GAMEPAD;
 
 /**
- * SkyController3Gamepad peripheral controller for SkyController3 remote control.
+ * SkyController1Gamepad peripheral controller for SkyController 1 remote control.
+ * <p>
+ * SkyController 1 uses the legacy {@code skyctrl} protocol rather than {@code ArsdkFeatureMapper}. This
+ * means that grab, axis reversal, volatile mapping, and VirtualGamepad navigation are all unsupported.
+ * <p>
+ * The legacy skyctrl callbacks that were previously centralised in {@link GamepadControllerBase} are
+ * owned exclusively by this class. {@link #onCommandReceived} only routes skyctrl UIDs; the mapper
+ * feature path in the base class is intentionally bypassed for SC1 firmware.
  */
 public final class Sc1Gamepad extends GamepadControllerBase {
 
-    /** The kyController3Gamepad peripheral for which this object is the backend. */
+    /** The SkyController1Gamepad peripheral for which this object is the backend. */
     @NonNull
-    private final SkyController3GamepadCore mGamepad;
+    private final SkyController1GamepadCore mGamepad;
 
-    /** Currently known buttons mapping entries, by entry uid. */
+    /**
+     * Currently known button mapping entries, keyed by SC1 key id (the Android keycode integer that
+     * identifies the physical button in the skyctrl protocol).
+     */
     @NonNull
-    private final HashMap<Long, MappingEntry> mButtonMappings;
+    private final HashMap<Integer, MappingEntry> mButtonMappings;
 
-    /** Currently known axis mapping entries, by entry uid. */
+    /**
+     * Currently known axis mapping entries, keyed by SC1 axis id (0–7, as reported by the skyctrl
+     * AxisMappingsState protocol).
+     */
     @NonNull
-    private final HashMap<Long, MappingEntry> mAxisMappings;
+    private final HashMap<Integer, MappingEntry> mAxisMappings;
 
-    /** Currently known axis interpolator entries, by entry uid. */
+    /**
+     * Accumulated axis interpolators during a {@code currentAxisFilters} batch, keyed by
+     * {@link SkyController1Gamepad.Axis}.
+     * <p>
+     * Cleared and rebuilt each time the firmware sends the full {@code onAllCurrentFiltersSent} batch.
+     */
     @NonNull
-    private final HashMap<Long, SkyController3GamepadCore.AxisInterpolatorEntry> mAxisInterpolators;
-
-    /** Currently known axis inversion entries, by entry uid. */
-    @NonNull
-    private final HashMap<Long, SkyController3GamepadCore.ReversedAxisEntry> mReversedAxes;
+    private final EnumMap<SkyController1Gamepad.Axis, AxisInterpolator> mPendingInterpolators;
 
     /**
      * Constructor.
@@ -96,24 +113,18 @@ public final class Sc1Gamepad extends GamepadControllerBase {
      */
     @SuppressLint("UseSparseArrays") // SparseArray has no values() method
     public Sc1Gamepad(@NonNull RCController deviceController) {
-        super(deviceController, new Translator());
-        mGamepad = new SkyController3GamepadCore(mComponentStore, mBackend);
-
+        super(deviceController, new NoOpTranslator());
+        mGamepad = new SkyController1GamepadCore(mComponentStore, mSc1Backend);
         mButtonMappings = new HashMap<>();
         mAxisMappings = new HashMap<>();
-        mAxisInterpolators = new HashMap<>();
-        mReversedAxes = new HashMap<>();
+        mPendingInterpolators = new EnumMap<>(SkyController1Gamepad.Axis.class);
 
         mGamepad.updateSupportedDroneModels(EnumSet.of(Drone.Model.UNKNOWN));
         mGamepad.updateActiveDroneModel(Drone.Model.UNKNOWN);
-
-        mGamepad.volatileMapping()
-                .updateSupportedFlag(false)
-                .updateValue(false);
-
-
         mGamepad.notifyUpdated();
     }
+
+    // ---- Lifecycle ----
 
     @Override
     protected void onConnected() {
@@ -127,7 +138,40 @@ public final class Sc1Gamepad extends GamepadControllerBase {
         mGamepad.unpublish();
         mButtonMappings.clear();
         mAxisMappings.clear();
+        mPendingInterpolators.clear();
     }
+
+    /**
+     * Routes incoming commands to the SC1 skyctrl callbacks only.
+     * <p>
+     * SC1 firmware speaks the legacy {@code skyctrl} protocol exclusively and never sends
+     * {@code ArsdkFeatureMapper} commands. To avoid the dead mapper path in the base class, this override
+     * handles only the four skyctrl sub-feature UIDs relevant to SC1 and does NOT call
+     * {@code super.onCommandReceived()}.
+     * <p>
+     * <strong>Verdict #10:</strong> adding this guard removes theoretical confusion from the unused
+     * mapper-callback path and makes the protocol boundary explicit.
+     */
+    @Override
+    protected void onCommandReceived(@NonNull ArsdkCommand command) {
+        int featureId = command.getFeatureId();
+        if (featureId == ArsdkFeatureSkyctrl.AxisMappingsState.UID) {
+            ArsdkFeatureSkyctrl.AxisMappingsState.decode(command, mSc1AxisMappingsStateCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.ButtonMappingsState.UID) {
+            ArsdkFeatureSkyctrl.ButtonMappingsState.decode(command, mSc1ButtonMappingsStateCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.GamepadInfosState.UID) {
+            ArsdkFeatureSkyctrl.GamepadInfosState.decode(command, mSc1GamepadInfoStateCallbacks);
+        } else if (featureId == ArsdkFeatureSkyctrl.AxisFiltersState.UID) {
+            ArsdkFeatureSkyctrl.AxisFiltersState.decode(command, mSc1AxisFiltersStateCallbacks);
+        }
+        // ArsdkFeatureMapper.UID is intentionally NOT handled — SC1 firmware never sends mapper commands.
+    }
+
+    // ---- Abstract method implementations (mapper-path — all no-ops for SC1) ----
+    //
+    // The base class mapper callbacks invoke these; since onCommandReceived does not route mapper UIDs
+    // to the base, these will never be called by SC1 firmware. They are implemented as required no-ops
+    // to satisfy the abstract contract.
 
     @Override
     void clearAllButtonsMappings() {
@@ -141,43 +185,25 @@ public final class Sc1Gamepad extends GamepadControllerBase {
 
     @Override
     void removeButtonsMappingEntry(long uid) {
-        mButtonMappings.remove(uid);
+        // mapper path — never called for SC1
     }
 
     @Override
     void removeAxisMappingEntry(long uid) {
-        mAxisMappings.remove(uid);
+        // mapper path — never called for SC1
     }
 
     @Override
-    void addButtonsMappingEntry(long uid, @NonNull Drone.Model droneModel, @NonNull ButtonsMappableAction action,
-                                long buttons) {
-        EnumSet<ButtonEvent> buttonEvents = ButtonEvents.eventsFrom(buttons);
-        if (buttonEvents != null && !buttonEvents.isEmpty()) {
-            mButtonMappings.put(uid, new ButtonsMappingEntry(droneModel, action, buttonEvents));
-            ULog.w(TAG_GAMEPAD, "putting button mapping [uid: " + uid + ", model: " + droneModel + ", action: " + action
-                    + ", buttons: " + Long.toBinaryString(buttons) + "]");
-        } else {
-            ULog.w(TAG_GAMEPAD, "Discarding button mapping [uid: " + uid + ", model: " + droneModel + ", action: " + action
-                                + ", buttons: " + Long.toBinaryString(buttons) + "]");
-        }
+    void addButtonsMappingEntry(long uid, @NonNull Drone.Model droneModel,
+                                @NonNull ButtonsMappableAction action, @ButtonMask long buttons) {
+        // mapper path — never called for SC1
     }
 
     @Override
-    void addAxisMappingEntry(long uid, @NonNull Drone.Model droneModel, @NonNull AxisMappableAction action,
-                             long axis, long buttons) {
-        AxisEvent axisEvent = AxisEvents.eventFrom(axis);
-        EnumSet<ButtonEvent> buttonEvents = ButtonEvents.eventsFrom(buttons);
-        if (axisEvent != null) {
-            mAxisMappings.put(uid, new AxisMappingEntry(droneModel, action, axisEvent, buttonEvents));
-            ULog.w(TAG_GAMEPAD, "putting axis mapping [uid: " + uid + ", model: " + droneModel + ", action:" + action
-                    + ", axis: " + Long.numberOfTrailingZeros(axis)
-                    + ", buttons: " + Long.toBinaryString(buttons) + "]");
-        } else {
-            ULog.w(TAG_GAMEPAD, "Discarding axis mapping [uid: " + uid + ", model: " + droneModel + ", action:" + action
-                                + ", axis: " + Long.numberOfTrailingZeros(axis)
-                                + ", buttons: " + Long.toBinaryString(buttons) + "]");
-        }
+    void addAxisMappingEntry(long uid, @NonNull Drone.Model droneModel,
+                             @NonNull AxisMappableAction action,
+                             @AxisMask long axis, @ButtonMask long buttons) {
+        // mapper path — never called for SC1
     }
 
     @Override
@@ -192,648 +218,763 @@ public final class Sc1Gamepad extends GamepadControllerBase {
 
     @Override
     void clearAllAxisInterpolators() {
-        mAxisInterpolators.clear();
+        // mapper path — never called for SC1; interpolators are updated via the AxisFilters state batch
     }
 
     @Override
     void removeAxisInterpolatorEntry(long uid) {
-        mAxisInterpolators.remove(uid);
+        // mapper path — never called for SC1
     }
 
     @Override
-    void addAxisInterpolatorEntry(long uid, @NonNull Drone.Model droneModel, @AxisMask long axisMask,
-                                  @NonNull AxisInterpolator interpolator) {
-        SkyController3Gamepad.Axis axis = InputMasks.axisFrom(axisMask);
-        if (axis != null) {
-            mAxisInterpolators.put(uid, new SkyController3GamepadCore.AxisInterpolatorEntry(
-                    droneModel, axis, interpolator));
-        }
+    void addAxisInterpolatorEntry(long uid, @NonNull Drone.Model droneModel,
+                                  @AxisMask long axisMask, @NonNull AxisInterpolator interpolator) {
+        // mapper path — never called for SC1
     }
 
     @Override
     void updateAxisInterpolators() {
-        // axis interpolators also serve to provide the set of supported drone models
-        EnumSet<Drone.Model> supportedModels = EnumSet.noneOf(Drone.Model.class);
-        for (SkyController3GamepadCore.AxisInterpolatorEntry entry : mAxisInterpolators.values()) {
-            supportedModels.add(entry.getDroneModel());
-        }
-        mGamepad.updateSupportedDroneModels(supportedModels)
-                .updateAxisInterpolators(mAxisInterpolators.values())
-                .notifyUpdated();
+        // mapper path — never called for SC1
     }
 
     @Override
     void clearAllReversedAxes() {
-        mReversedAxes.clear();
+        // mapper path — never called for SC1; axis reversal is not in the skyctrl protocol
     }
 
     @Override
     void removeReversedAxisEntry(long uid) {
-        mReversedAxes.remove(uid);
+        // mapper path — never called for SC1
     }
 
     @Override
-    void addReversedAxisEntry(long uid, @NonNull Drone.Model droneModel, @AxisMask long axisMask, boolean reversed) {
-        SkyController3Gamepad.Axis axis = InputMasks.axisFrom(axisMask);
-        if (axis != null) {
-            mReversedAxes.put(uid, new SkyController3GamepadCore.ReversedAxisEntry(droneModel, axis, reversed));
-        }
+    void addReversedAxisEntry(long uid, @NonNull Drone.Model droneModel,
+                              @AxisMask long axisMask, boolean reversed) {
+        // mapper path — never called for SC1
     }
 
     @Override
     void updateReversedAxes() {
-        mGamepad.updateReversedAxes(mReversedAxes.values()).notifyUpdated();
+        // mapper path — never called for SC1
     }
 
+    /**
+     * No-op override for SC1.
+     * <p>
+     * <strong>Verdict #5:</strong> SC1 firmware never sends {@code ArsdkFeatureMapper.GrabState} because
+     * it does not speak the mapper feature. This override ensures the base class grab-state machinery
+     * does not run for SC1.
+     */
     @Override
     void onGrabState(@ButtonMask long buttonsMask, @AxisMask long axesMask, @ButtonMask long buttonStates) {
-        // collect grabbed buttons
-        EnumSet<SkyController3Gamepad.Button> buttons = EnumSet.noneOf(SkyController3Gamepad.Button.class);
-        for (SkyController3Gamepad.Button button : SkyController3Gamepad.Button.values()) {
-            InputMasks info = InputMasks.of(button);
-            if (info != null && ((buttonsMask & info.mButtons) != 0 || (axesMask & info.mAxes) != 0)) {
-                // some of the input's buttons and/or axes are selected, so we consider the input grabbed
-                buttons.add(button);
-                // however warn if the complete set of buttons/axes is not present
-                if ((buttonsMask & info.mButtons) != info.mButtons || (axesMask & info.mAxes) != info.mAxes) {
-                    ULog.w(TAG_GAMEPAD, "Missing grabbed buttons/axes for input " + button
-                                        + " [buttons: " + Long.toBinaryString(buttonsMask)
-                                        + " , axes: " + Long.toBinaryString(axesMask) + "]");
-                }
-            }
-        }
-        // collect grabbed axes
-        EnumSet<SkyController3Gamepad.Axis> axes = EnumSet.noneOf(SkyController3Gamepad.Axis.class);
-        for (SkyController3Gamepad.Axis axis : SkyController3Gamepad.Axis.values()) {
-            InputMasks info = InputMasks.of(axis);
-            if (info != null && ((buttonsMask & info.mButtons) != 0 || (axesMask & info.mAxes) != 0)) {
-                // some of the input's buttons and/or axes are selected, so we consider the input grabbed
-                axes.add(axis);
-                // however warn if the complete set of buttons/axes is not present
-                if ((buttonsMask & info.mButtons) != info.mButtons || (axesMask & info.mAxes) != info.mAxes) {
-                    ULog.w(TAG_GAMEPAD, "Missing grabbed buttons/axes for input " + axis
-                                        + " [buttons: " + Long.toBinaryString(buttonsMask)
-                                        + " , axes: " + Long.toBinaryString(axesMask) + "]");
-                }
-            }
-        }
-        // publish state to gamepad
-        mGamepad.updateGrabbedInputs(buttons, axes)
-                .updateGrabbedButtonEvents(ButtonEvents.statesFrom(buttonsMask, buttonStates))
-                .notifyUpdated();
+        // SC1 has no grab support — intentional no-op (verdict #5)
     }
 
     @Override
     void onButtonEvent(@ButtonMask long button, boolean pressed) {
-        ButtonEvent buttonEvent = ButtonEvents.eventFrom(button);
-        if (buttonEvent != null) {
-            mGamepad.updateGrabbedButtonEvent(buttonEvent,
-                    pressed ? ButtonEvent.State.PRESSED : ButtonEvent.State.RELEASED).notifyUpdated();
-        }
+        // SC1 grab path is never active — no-op
     }
 
     @Override
     void onAxisEvent(@AxisMask long axis, @IntRange(from = -100, to = 100) int value) {
-        AxisEvent axisEvent = AxisEvents.eventFrom(axis);
-        if (axisEvent != null) {
-            mGamepad.notifyAxisEvent(axisEvent, value);
-        }
+        // SC1 grab path is never active — no-op
     }
 
+    /**
+     * No-op override for SC1.
+     * <p>
+     * SC1 does not have volatile mapping in the skyctrl protocol. The {@link SkyController1GamepadCore}
+     * does not expose a {@code volatileMapping()} setting, so there is nothing to update.
+     */
     @Override
     void onVolatileMapping(boolean enabled) {
-        mGamepad.volatileMapping()
-                .updateSupportedFlag(true)
-                .updateValue(enabled);
-        mGamepad.notifyUpdated();
+        // volatile mapping absent from skyctrl protocol — intentional no-op
     }
 
     @Override
     void processActiveDroneModelChange(@NonNull Drone.Model droneModel) {
-        mGamepad.updateActiveDroneModel(droneModel).notifyUpdated();
+        // mapper path (onActiveProduct) — never called for SC1; active model is always UNKNOWN
     }
 
-    /** Backend of SkyController3GamepadCore implementation. */
-    @SuppressWarnings("FieldCanBeLocal")
-    private final SkyController3GamepadCore.Backend mBackend = new SkyController3GamepadCore.Backend() {
+    // ---- SC1 legacy skyctrl inbound callbacks ----
+
+    /** Helper value object for a single skyctrl mapping record (key/axis id + mapping uid string). */
+    private static final class Sc1Mapping {
+
+        /** Key or axis id from the skyctrl protocol. */
+        final int id;
+
+        /** Mapping uid string from the skyctrl protocol (e.g. {@code "Yaw"}, {@code "No Action"}). */
+        @NonNull
+        final String mappingUid;
+
+        Sc1Mapping(int id, @NonNull String mappingUid) {
+            this.id = id;
+            this.mappingUid = mappingUid;
+        }
+    }
+
+    /**
+     * Callbacks for {@code skyctrl.AxisMappingsState}.
+     * <p>
+     * Accumulates the full current mapping list between {@code onCurrentAxisMappings} and
+     * {@code onAllCurrentAxisMappingsSent}, then pushes the result to {@link SkyController1GamepadCore}.
+     * <p>
+     * <strong>Verdict #15 (Yaw/Gaz fix):</strong> {@code "Yaw"} maps to
+     * {@link AxisMappableAction#CONTROL_YAW_ROTATION_SPEED} and {@code "Gaz"} maps to
+     * {@link AxisMappableAction#CONTROL_THROTTLE}. The previous code in
+     * {@code GamepadControllerBase} had these inverted.
+     * <p>
+     * <strong>Verdict #14 (trailing-space fix):</strong> {@code mappingUid} is trimmed before the switch
+     * because firmware sends {@code "Camera Tilt "} (with trailing space) on some versions. Using
+     * {@link String#trim()} makes the mapping robust against both variants.
+     */
+    private final ArsdkFeatureSkyctrl.AxisMappingsState.Callback mSc1AxisMappingsStateCallbacks =
+            new ArsdkFeatureSkyctrl.AxisMappingsState.Callback() {
+
+        final Collection<Sc1Mapping> pending = new ArrayList<>();
 
         @Override
-        public void setupMappingEntry(@NonNull MappingEntry mappingEntry, boolean register) {
-            Drone.Model droneModel = mappingEntry.getDroneModel();
-            @ButtonMask long buttonsMask = 0;
-            switch (mappingEntry.getType()) {
-                case BUTTONS_MAPPING:
-                    ButtonsMappingEntry buttonsEntry = mappingEntry.as(ButtonsMappingEntry.class);
-                    ButtonsMappableAction buttonsAction = buttonsEntry.getAction();
-//                    if (register) {
-                        buttonsMask = ButtonEvents.maskFrom(buttonsEntry.getButtonEvents());
-//                    }
-//                    setupButtonsMappingEntry(droneModel, buttonsAction, buttonsMask);
+        public void onCurrentAxisMappings(int axisId, String mappingUid) {
+            pending.add(new Sc1Mapping(axisId, mappingUid));
+        }
 
-                    final String buttonUid;
+        @Override
+        public void onAllCurrentAxisMappingsSent() {
+            Log.i("SC1", "all current axis mappings sent");
+            mAxisMappings.clear();
 
-                    switch (buttonsAction) {
-                        case APP_ACTION_SETTINGS:
-                            buttonUid = "Settings";
-                            break;
-                        case RETURN_HOME:
-                            buttonUid = "Return Home";
-                            break;
-                        case TAKEOFF_OR_LAND:
-                            buttonUid = "Takeoff/Landing";
-                            break;
-                        case RECORD_VIDEO:
-                            buttonUid = "Record";
-                            break;
-                        case TAKE_PICTURE:
-                            buttonUid = "Photo";
-                            break;
-                        case CENTER_CAMERA:
-                            buttonUid = "Reset Camera";
-                            break;
-                        case EMERGENCY_CUTOFF:
-                            buttonUid = "Emergency";
-                            break;
-                        case BACK:
-                            buttonUid = "Back";
-                            break;
-                        default:
-                            buttonUid = "No Action";
-                            break;
+            for (Sc1Mapping mapping : pending) {
+                // Trim trailing spaces before switch — firmware may send "Camera Tilt " with a trailing
+                // space; .trim() makes the match robust without changing current behaviour (verdict #14).
+                final String uid = mapping.mappingUid.trim();
+                final AxisMappableAction action;
+
+                switch (uid) {
+                    case "Pitch":
+                        action = AxisMappableAction.CONTROL_PITCH;
+                        break;
+                    case "Roll":
+                        action = AxisMappableAction.CONTROL_ROLL;
+                        break;
+                    case "Yaw":
+                        // verdict #15: outbound sends "Yaw" for YAW_ROTATION_SPEED — decode consistently
+                        action = AxisMappableAction.CONTROL_YAW_ROTATION_SPEED;
+                        break;
+                    case "Gaz":
+                        // verdict #15: outbound sends "Gaz" for THROTTLE — decode consistently
+                        action = AxisMappableAction.CONTROL_THROTTLE;
+                        break;
+                    case "Camera Pan":
+                        action = AxisMappableAction.PAN_CAMERA;
+                        break;
+                    case "Camera Tilt":
+                        action = AxisMappableAction.TILT_CAMERA;
+                        break;
+                    case "No Action":
+                        action = AxisMappableAction.NO_ACTION;
+                        break;
+                    default:
+                        action = null;
+                        break;
+                }
+
+                if (action != null) {
+                    AxisEvent axisEvent = AxisEvents.eventFrom(mapping.id);
+                    if (axisEvent != null) {
+                        mAxisMappings.put(mapping.id,
+                                new AxisMappingEntry(Drone.Model.UNKNOWN, action, axisEvent));
+                    } else {
+                        ULog.w(TAG_GAMEPAD, "SC1: unknown axis id " + mapping.id + ", dropping mapping");
                     }
-                    sendCommand(ArsdkFeatureSkyctrl.ButtonMappings.encodeSetButtonMapping((int) buttonsMask, buttonUid));
-                    break;
-                case AXIS_MAPPING:
-                    AxisMappingEntry axisEntry = mappingEntry.as(AxisMappingEntry.class);
-                    AxisMappableAction axisAction = axisEntry.getAction();
-                    @AxisMask long axisMask = 0;
-//                    if (register) {
-                        axisMask = AxisEvents.maskFrom(axisEntry.getAxisEvent());
-//                        buttonsMask = ButtonEvents.maskFrom(axisEntry.getButtonEvents());
-//                    }
-//                    setupAxisMapping(droneModel, axisAction, axisMask, buttonsMask);
+                }
+            }
 
-                    final String axisUid;
+            updateAxisMappings();
+            pending.clear();
+        }
 
-                    switch (axisAction) {
+        @Override
+        public void onAvailableAxisMappings(String mappingUid, String name) {
+            // informational — not used
+        }
 
-                        case CONTROL_ROLL:
-                            axisUid = "Roll";
-                            break;
-                        case CONTROL_PITCH:
-                            axisUid = "Pitch";
-                            break;
-                        case CONTROL_YAW_ROTATION_SPEED:
-                            axisUid = "Yaw";
-                            break;
-                        case CONTROL_THROTTLE:
-                            axisUid = "Gaz";
-                            break;
-                        case PAN_CAMERA:
-                            axisUid = "Camera Pan";
-                            break;
-                        case TILT_CAMERA:
-                            axisUid = "Camera Tilt";
-                            break;
-                        default:
-                            axisUid = "No Action";
-                            break;
+        @Override
+        public void onAllAvailableAxisMappingsSent() {
+            // informational — not used
+        }
+    };
+
+    /**
+     * Callbacks for {@code skyctrl.ButtonMappingsState}.
+     * <p>
+     * Accumulates the full current mapping list between {@code onCurrentButtonMappings} and
+     * {@code onAllCurrentButtonMappingsSent}, then pushes the result to {@link SkyController1GamepadCore}.
+     * <p>
+     * <strong>Verdict #14 (trailing-space fix):</strong> {@code mappingUid} is trimmed before the switch
+     * because firmware sends {@code "Takeoff/Landing "} (with trailing space) on some versions.
+     */
+    private final ArsdkFeatureSkyctrl.ButtonMappingsState.Callback mSc1ButtonMappingsStateCallbacks =
+            new ArsdkFeatureSkyctrl.ButtonMappingsState.Callback() {
+
+        final Collection<Sc1Mapping> pending = new ArrayList<>();
+
+        @Override
+        public void onCurrentButtonMappings(int keyId, String mappingUid) {
+            pending.add(new Sc1Mapping(keyId, mappingUid));
+        }
+
+        @Override
+        public void onAllCurrentButtonMappingsSent() {
+            Log.i("SC1", "all current button mappings sent");
+            mButtonMappings.clear();
+
+            for (Sc1Mapping mapping : pending) {
+                // Trim trailing spaces — firmware may send "Takeoff/Landing " with a trailing space
+                // on some versions (verdict #14).
+                final String uid = mapping.mappingUid.trim();
+                final ButtonsMappableAction action;
+
+                switch (uid) {
+                    case "Emergency":
+                        action = ButtonsMappableAction.EMERGENCY_CUTOFF;
+                        break;
+                    case "Return Home":
+                        action = ButtonsMappableAction.RETURN_HOME;
+                        break;
+                    case "Record":
+                        action = ButtonsMappableAction.RECORD_VIDEO;
+                        break;
+                    case "Settings":
+                        action = ButtonsMappableAction.APP_ACTION_SETTINGS;
+                        break;
+                    case "Reset Camera":
+                        action = ButtonsMappableAction.CENTER_CAMERA;
+                        break;
+                    case "Takeoff/Landing":
+                        action = ButtonsMappableAction.TAKEOFF_OR_LAND;
+                        break;
+                    case "Photo":
+                        action = ButtonsMappableAction.TAKE_PICTURE;
+                        break;
+                    case "No Action":
+                        action = ButtonsMappableAction.NO_ACTION;
+                        break;
+                    case "Back":
+                        action = ButtonsMappableAction.BACK;
+                        break;
+                    default:
+                        action = null;
+                        break;
+                }
+
+                if (action != null) {
+                    ButtonEvent buttonEvent = ButtonEvents.eventFrom(mapping.id);
+                    if (buttonEvent != null) {
+                        Set<ButtonEvent> events = EnumSet.of(buttonEvent);
+                        mButtonMappings.put(mapping.id,
+                                new ButtonsMappingEntry(Drone.Model.UNKNOWN, action, events));
+                    } else {
+                        ULog.w(TAG_GAMEPAD, "SC1: unknown key id " + mapping.id + ", dropping mapping");
                     }
-                    sendCommand(ArsdkFeatureSkyctrl.AxisMappings.encodeSetAxisMapping((int) axisMask, axisUid));
-                    break;
+                }
+            }
+
+            updateButtonsMappings();
+            pending.clear();
+        }
+
+        @Override
+        public void onAvailableButtonMappings(String mappingUid, String name) {
+            // informational — not used
+        }
+
+        @Override
+        public void onAllAvailableButtonsMappingsSent() {
+            // informational — not used
+        }
+    };
+
+    /**
+     * Callbacks for {@code skyctrl.GamepadInfosState}.
+     * <p>
+     * The {@code gamepadControl} event provides the human-readable name of each key/axis reported by
+     * firmware, but the names are dynamic and not consumed by the mapping decode logic. Retained for
+     * completeness and debug logging.
+     */
+    private final ArsdkFeatureSkyctrl.GamepadInfosState.Callback mSc1GamepadInfoStateCallbacks =
+            new ArsdkFeatureSkyctrl.GamepadInfosState.Callback() {
+
+        @Override
+        public void onGamepadControl(
+                @Nullable ArsdkFeatureSkyctrl.GamepadinfosstateGamepadcontrolType type,
+                int id, String name) {
+            // informational only — firmware-reported name is not used in mapping decode
+        }
+    };
+
+    /**
+     * Callbacks for {@code skyctrl.AxisFiltersState}.
+     * <p>
+     * Each {@code onCurrentAxisFilters} delivers one axis id plus its current filter builder string.
+     * The batch ends with {@code onAllCurrentFiltersSent}, at which point the accumulated map is
+     * pushed atomically to {@link SkyController1GamepadCore}.
+     * <p>
+     * <strong>Verdict #8/#9:</strong> The firmware sends the full builder string as-is:
+     * <ul>
+     *   <li>{@code "ARMF;"} or prefix {@code "ARMF"} → {@link AxisInterpolator#LINEAR}</li>
+     *   <li>{@code "ARXF;CPx;CPy;"} prefix {@code "ARXF"} → nearest preset tier by CPx value</li>
+     * </ul>
+     * CPx thresholds used to classify exponential tiers (midpoints between provisional values):
+     * <ul>
+     *   <li>CPx &lt; 0.70 → {@link AxisInterpolator#LIGHT_EXPONENTIAL} (nominal 0.65)</li>
+     *   <li>CPx &lt; 0.80 → {@link AxisInterpolator#MEDIUM_EXPONENTIAL} (nominal 0.75)</li>
+     *   <li>CPx &lt; 0.875 → {@link AxisInterpolator#STRONG_EXPONENTIAL} (nominal 0.85)</li>
+     *   <li>CPx &ge; 0.875 → {@link AxisInterpolator#STRONGEST_EXPONENTIAL} (nominal 0.90)</li>
+     * </ul>
+     */
+    private final ArsdkFeatureSkyctrl.AxisFiltersState.Callback mSc1AxisFiltersStateCallbacks =
+            new ArsdkFeatureSkyctrl.AxisFiltersState.Callback() {
+
+        @Override
+        public void onCurrentAxisFilters(int axisId, String filterUidOrBuilder) {
+            SkyController1Gamepad.Axis axis = AxisEvents.axisFrom(axisId);
+            if (axis == null) {
+                ULog.w(TAG_GAMEPAD, "SC1: unknown axis id " + axisId + " in AxisFiltersState, ignoring");
+                return;
+            }
+            AxisInterpolator interpolator = parseFilterString(filterUidOrBuilder);
+            if (interpolator != null) {
+                mPendingInterpolators.put(axis, interpolator);
+            } else {
+                ULog.w(TAG_GAMEPAD, "SC1: unrecognised filter string '" + filterUidOrBuilder
+                        + "' for axis " + axisId + ", ignoring");
             }
         }
 
         @Override
-        public void setAxisInterpolator(@NonNull Drone.Model droneModel, @NonNull SkyController3Gamepad.Axis axis,
-                                        @NonNull AxisInterpolator interpolator) {
-//            Sc1Gamepad.this.setAxisInterpolator(droneModel, InputMasks.of(axis).mAxes, interpolator);
-        }
-
-        @Override
-        public void setReversedAxis(@NonNull Drone.Model droneModel, @NonNull SkyController3Gamepad.Axis axis,
-                                    boolean reversed) {
-//            Sc1Gamepad.this.setReversedAxis(droneModel, InputMasks.of(axis).mAxes, reversed);
-        }
-
-        @Override
-        public void resetMappings(@Nullable Drone.Model model) {
-            sendCommand(ArsdkFeatureSkyctrl.ButtonMappings.encodeDefaultButtonMapping());
-            sendCommand(ArsdkFeatureSkyctrl.AxisMappings.encodeDefaultAxisMapping());
-//            Sc1Gamepad.this.resetMappings(model);
-        }
-
-        @Override
-        public void setGrabbedInputs(@NonNull Set<SkyController3Gamepad.Button> buttons,
-                                     @NonNull Set<SkyController3Gamepad.Axis> axes) {
-//            InputMasks info = InputMasks.collect(buttons, axes);
-//            grab(info.mButtons, info.mAxes);
-        }
-
-        @Override
-        public boolean setVolatileMapping(boolean enable) {
-//            enableVolatileMapping(enable);
-            return true;
+        public void onAllCurrentFiltersSent() {
+            mGamepad.updateAxisInterpolators(mPendingInterpolators).notifyUpdated();
+            mPendingInterpolators.clear();
         }
     };
 
-    /** Translates mapper buttons/axes masks to navigation events for SkyController3 VirtualGamepad implementation. */
-    private static final class Translator implements NavigationEventTranslator {
+    // ---- Backend implementation ----
+
+    /**
+     * Backend of {@link SkyController1GamepadCore}.
+     * <p>
+     * All operations translate to skyctrl protocol commands; the mapper feature is never used for SC1.
+     */
+    private final SkyController1GamepadCore.Backend mSc1Backend = new SkyController1GamepadCore.Backend() {
+
+        @Override
+        public void setupMappingEntry(@NonNull MappingEntry mappingEntry, boolean register) {
+            switch (mappingEntry.getType()) {
+                case BUTTONS_MAPPING: {
+                    ButtonsMappingEntry buttonsEntry = mappingEntry.as(ButtonsMappingEntry.class);
+                    ButtonsMappableAction buttonsAction = buttonsEntry.getAction();
+                    int keyId = ButtonEvents.keycodeFrom(buttonsEntry.getButtonEvents());
+                    if (keyId < 0) {
+                        ULog.w(TAG_GAMEPAD, "SC1: cannot determine key id for button mapping, dropping");
+                        return;
+                    }
+                    final String mappingUid;
+                    if (!register) {
+                        mappingUid = "No Action";
+                    } else {
+                        mappingUid = buttonActionToUid(buttonsAction);
+                    }
+                    sendCommand(ArsdkFeatureSkyctrl.ButtonMappings.encodeSetButtonMapping(keyId, mappingUid));
+                    break;
+                }
+                case AXIS_MAPPING: {
+                    AxisMappingEntry axisEntry = mappingEntry.as(AxisMappingEntry.class);
+                    AxisMappableAction axisAction = axisEntry.getAction();
+                    int axisId = AxisEvents.idFrom(axisEntry.getAxisEvent());
+                    if (axisId < 0) {
+                        ULog.w(TAG_GAMEPAD, "SC1: cannot determine axis id for axis mapping, dropping");
+                        return;
+                    }
+                    final String mappingUid;
+                    if (!register) {
+                        mappingUid = "No Action";
+                    } else {
+                        mappingUid = axisActionToUid(axisAction);
+                    }
+                    sendCommand(ArsdkFeatureSkyctrl.AxisMappings.encodeSetAxisMapping(axisId, mappingUid));
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public void setAxisInterpolator(@NonNull SkyController1Gamepad.Axis axis,
+                                        @NonNull AxisInterpolator interpolator) {
+            int axisId = AxisEvents.idFromAxis(axis);
+            if (axisId < 0) {
+                ULog.w(TAG_GAMEPAD, "SC1: unknown Axis " + axis + " for setAxisInterpolator, dropping");
+                return;
+            }
+            String filterString = interpolatorToFilterString(interpolator);
+            sendCommand(ArsdkFeatureSkyctrl.AxisFilters.encodeSetAxisFilter(axisId, filterString));
+        }
+
+        @Override
+        public void resetMappings() {
+            sendCommand(ArsdkFeatureSkyctrl.ButtonMappings.encodeDefaultButtonMapping());
+            sendCommand(ArsdkFeatureSkyctrl.AxisMappings.encodeDefaultAxisMapping());
+        }
+    };
+
+    // ---- Helpers ----
+
+    /**
+     * Translates a {@link ButtonsMappableAction} to the skyctrl button mapping uid string.
+     *
+     * @param action action to translate
+     *
+     * @return the mapping uid string, or {@code "No Action"} for unmapped or unknown actions
+     */
+    @NonNull
+    private static String buttonActionToUid(@NonNull ButtonsMappableAction action) {
+        switch (action) {
+            case APP_ACTION_SETTINGS:
+                return "Settings";
+            case RETURN_HOME:
+                return "Return Home";
+            case TAKEOFF_OR_LAND:
+                return "Takeoff/Landing";
+            case RECORD_VIDEO:
+                return "Record";
+            case TAKE_PICTURE:
+                return "Photo";
+            case CENTER_CAMERA:
+                return "Reset Camera";
+            case EMERGENCY_CUTOFF:
+                return "Emergency";
+            case BACK:
+                return "Back";
+            default:
+                return "No Action";
+        }
+    }
+
+    /**
+     * Translates an {@link AxisMappableAction} to the skyctrl axis mapping uid string.
+     *
+     * @param action action to translate
+     *
+     * @return the mapping uid string, or {@code "No Action"} for unmapped or unknown actions
+     */
+    @NonNull
+    private static String axisActionToUid(@NonNull AxisMappableAction action) {
+        switch (action) {
+            case CONTROL_ROLL:
+                return "Roll";
+            case CONTROL_PITCH:
+                return "Pitch";
+            case CONTROL_YAW_ROTATION_SPEED:
+                // outbound: "Yaw" = yaw rotation speed (consistent with inbound fix, verdict #15)
+                return "Yaw";
+            case CONTROL_THROTTLE:
+                // outbound: "Gaz" = throttle (consistent with inbound fix, verdict #15)
+                return "Gaz";
+            case PAN_CAMERA:
+                return "Camera Pan";
+            case TILT_CAMERA:
+                return "Camera Tilt";
+            default:
+                return "No Action";
+        }
+    }
+
+    /**
+     * Translates an {@link AxisInterpolator} to a skyctrl AxisFilters builder string.
+     * <p>
+     * Mapping (provisional CPx/CPy values — bench confirmation required before final commit,
+     * per verdict #8):
+     * <ul>
+     *   <li>{@link AxisInterpolator#LINEAR} → {@code "ARMF;"} (linear, firmware default)</li>
+     *   <li>{@link AxisInterpolator#LIGHT_EXPONENTIAL} → {@code "ARXF;0.65;0.35;"}</li>
+     *   <li>{@link AxisInterpolator#MEDIUM_EXPONENTIAL} → {@code "ARXF;0.75;0.25;"}</li>
+     *   <li>{@link AxisInterpolator#STRONG_EXPONENTIAL} → {@code "ARXF;0.85;0.15;"}</li>
+     *   <li>{@link AxisInterpolator#STRONGEST_EXPONENTIAL} → {@code "ARXF;0.90;0.10;"}</li>
+     * </ul>
+     *
+     * @param interpolator interpolator to translate
+     *
+     * @return the corresponding builder string
+     */
+    @NonNull
+    static String interpolatorToFilterString(@NonNull AxisInterpolator interpolator) {
+        switch (interpolator) {
+            case LINEAR:
+                return "ARMF;";
+            case LIGHT_EXPONENTIAL:
+                return "ARXF;0.65;0.35;";
+            case MEDIUM_EXPONENTIAL:
+                return "ARXF;0.75;0.25;";
+            case STRONG_EXPONENTIAL:
+                return "ARXF;0.85;0.15;";
+            case STRONGEST_EXPONENTIAL:
+                return "ARXF;0.90;0.10;";
+            default:
+                return "ARMF;";
+        }
+    }
+
+    /**
+     * Parses a skyctrl AxisFilters builder string into the nearest {@link AxisInterpolator} preset.
+     * <p>
+     * <ul>
+     *   <li>Strings starting with {@code "ARMF"} → {@link AxisInterpolator#LINEAR}</li>
+     *   <li>Strings starting with {@code "ARXF"}: the CPx field is parsed and matched to the nearest
+     *       preset tier using midpoint thresholds between the provisional CPx values (verdict #8/#9):
+     *       CPx &lt; 0.70 → LIGHT, CPx &lt; 0.80 → MEDIUM, CPx &lt; 0.875 → STRONG,
+     *       CPx &ge; 0.875 → STRONGEST.</li>
+     * </ul>
+     *
+     * @param filterUidOrBuilder builder string from firmware
+     *
+     * @return corresponding {@link AxisInterpolator}, or {@code null} if the string is unrecognised
+     */
+    @Nullable
+    static AxisInterpolator parseFilterString(@NonNull String filterUidOrBuilder) {
+        if (filterUidOrBuilder.startsWith("ARMF")) {
+            return AxisInterpolator.LINEAR;
+        }
+        if (filterUidOrBuilder.startsWith("ARXF")) {
+            // Format: "ARXF;CPx;CPy;"
+            String[] parts = filterUidOrBuilder.split(";");
+            if (parts.length >= 2) {
+                try {
+                    float cpx = Float.parseFloat(parts[1]);
+                    if (cpx < 0.70f) {
+                        return AxisInterpolator.LIGHT_EXPONENTIAL;
+                    } else if (cpx < 0.80f) {
+                        return AxisInterpolator.MEDIUM_EXPONENTIAL;
+                    } else if (cpx < 0.875f) {
+                        return AxisInterpolator.STRONG_EXPONENTIAL;
+                    } else {
+                        return AxisInterpolator.STRONGEST_EXPONENTIAL;
+                    }
+                } catch (NumberFormatException e) {
+                    ULog.w(TAG_GAMEPAD, "SC1: malformed ARXF CPx in '" + filterUidOrBuilder + "'");
+                }
+            }
+        }
+        return null;
+    }
+
+    // ---- ButtonEvents inner class ----
+
+    /**
+     * Bidirectional table mapping SC1 Android keycode integers to {@link ButtonEvent} enum constants.
+     * <p>
+     * SC1 does not use the mapper feature for buttons; keycodes are raw Android integers reported by
+     * the {@code skyctrl.GamepadInfosState.gamepadControl} event and used as the {@code key_id} in
+     * {@code skyctrl.ButtonMappings}.
+     */
+    @VisibleForTesting
+    static final class ButtonEvents {
 
         /**
-         * Mask of buttons to use to grab navigation.
-         * <p>
-         * These are the left stick left/right/up/down buttons (nav), plus right buttons 2 & 3 (cancel/ok).
+         * Returns the {@link ButtonEvent} for the given SC1 keycode, or {@code null} if unrecognised.
+         *
+         * @param keycode Android keycode integer
+         *
+         * @return corresponding {@link ButtonEvent}, or {@code null}
          */
-        @ButtonMask
-        private static final long BUTTONS_MASK =
-                MASK_BUTTON_4 | MASK_BUTTON_5 | MASK_BUTTON_6 | MASK_BUTTON_7 | MASK_BUTTON_2 | MASK_BUTTON_3;
+        @Nullable
+        static ButtonEvent eventFrom(int keycode) {
+            ButtonEvent event = KEYCODE_TO_EVENT.get(keycode);
+            if (event == null) {
+                ULog.w(TAG_GAMEPAD, "SC1: unsupported keycode " + keycode);
+            }
+            return event;
+        }
 
         /**
-         * Mask of axes to use to grab navigation.
+         * Returns the SC1 keycode for the first {@link ButtonEvent} in the given set.
          * <p>
-         * These are the left stick horizontal & vertical axes.
+         * SC1 maps one button per action, so the set is expected to be a singleton. Returns {@code -1}
+         * if the set is empty or contains an unrecognised event.
+         *
+         * @param events set of button events
+         *
+         * @return keycode integer, or {@code -1} if the event cannot be resolved
          */
-        @AxisMask
-        private static final long AXES_MASK = MASK_AXIS_0 | MASK_AXIS_1;
+        static int keycodeFrom(@NonNull Set<ButtonEvent> events) {
+            if (events.isEmpty()) {
+                return -1;
+            }
+            ButtonEvent event = events.iterator().next();
+            int keycode = EVENT_TO_KEYCODE.get(event.ordinal(), -1);
+            if (keycode < 0) {
+                ULog.w(TAG_GAMEPAD, "SC1: no keycode for ButtonEvent " + event);
+            }
+            return keycode;
+        }
+
+        private ButtonEvents() {}
+
+        /** GSDK ButtonEvent, by SC1 Android keycode integer. */
+        private static final SparseArray<ButtonEvent> KEYCODE_TO_EVENT = new SparseArray<>();
+
+        /** SC1 Android keycode integer, by GSDK ButtonEvent ordinal. */
+        private static final SparseArray<Integer> EVENT_TO_KEYCODE = new SparseArray<>();
+
+        private static void map(int keycode, @NonNull ButtonEvent event) {
+            KEYCODE_TO_EVENT.put(keycode, event);
+            EVENT_TO_KEYCODE.put(event.ordinal(), keycode);
+        }
+
+        static {
+            map(96, ButtonEvent.LEFT_MINI_JS);
+            map(97, ButtonEvent.RETURN_HOME);
+            map(98, ButtonEvent.RECORD);
+            map(99, ButtonEvent.EMERGENCY);
+            map(100, ButtonEvent.RIGHT_MINI_JS);
+            map(101, ButtonEvent.TAKEOFF_LAND);
+            map(103, ButtonEvent.HOME);
+            map(104, ButtonEvent.BACK);
+        }
+    }
+
+    // ---- AxisEvents inner class ----
+
+    /**
+     * Bidirectional table mapping SC1 axis id integers (0–7) to {@link AxisEvent} enum constants and
+     * to {@link SkyController1Gamepad.Axis} inputs.
+     * <p>
+     * SC1 axis ids are simple sequential integers used as the {@code axis_id} field in the
+     * {@code skyctrl.AxisMappings} and {@code skyctrl.AxisFilters} protocols.
+     */
+    @VisibleForTesting
+    static final class AxisEvents {
+
+        /**
+         * Returns the {@link AxisEvent} for the given SC1 axis id, or {@code null} if unrecognised.
+         *
+         * @param axisId SC1 axis id (0–7)
+         *
+         * @return corresponding {@link AxisEvent}, or {@code null}
+         */
+        @Nullable
+        static AxisEvent eventFrom(int axisId) {
+            AxisEvent event = AXIS_ID_TO_EVENT.get(axisId);
+            if (event == null) {
+                ULog.w(TAG_GAMEPAD, "SC1: unsupported axis id " + axisId);
+            }
+            return event;
+        }
+
+        /**
+         * Returns the SC1 axis id for the given {@link AxisEvent}, or {@code -1} if unrecognised.
+         *
+         * @param event axis event
+         *
+         * @return SC1 axis id, or {@code -1}
+         */
+        static int idFrom(@NonNull AxisEvent event) {
+            return EVENT_TO_AXIS_ID.get(event.ordinal(), -1);
+        }
+
+        /**
+         * Returns the {@link SkyController1Gamepad.Axis} input for the given SC1 axis id, or
+         * {@code null} if unrecognised.
+         * <p>
+         * Used by the AxisFiltersState decode path to look up the public Axis enum from a raw id.
+         *
+         * @param axisId SC1 axis id (0–7)
+         *
+         * @return corresponding {@link SkyController1Gamepad.Axis}, or {@code null}
+         */
+        @Nullable
+        static SkyController1Gamepad.Axis axisFrom(int axisId) {
+            return AXIS_ID_TO_AXIS.get(axisId);
+        }
+
+        /**
+         * Returns the SC1 axis id for the given {@link SkyController1Gamepad.Axis} input, or
+         * {@code -1} if unrecognised.
+         * <p>
+         * Used by the backend's {@code setAxisInterpolator} to determine which axis id to send to
+         * firmware.
+         *
+         * @param axis public axis input
+         *
+         * @return SC1 axis id, or {@code -1}
+         */
+        static int idFromAxis(@NonNull SkyController1Gamepad.Axis axis) {
+            return AXIS_TO_AXIS_ID.get(axis.ordinal(), -1);
+        }
+
+        private AxisEvents() {}
+
+        /** GSDK AxisEvent, by SC1 axis id. */
+        private static final SparseArray<AxisEvent> AXIS_ID_TO_EVENT = new SparseArray<>();
+
+        /** SC1 axis id, by GSDK AxisEvent ordinal. */
+        private static final SparseArray<Integer> EVENT_TO_AXIS_ID = new SparseArray<>();
+
+        /** GSDK Axis input, by SC1 axis id. */
+        private static final SparseArray<SkyController1Gamepad.Axis> AXIS_ID_TO_AXIS = new SparseArray<>();
+
+        /** SC1 axis id, by GSDK Axis input ordinal. */
+        private static final SparseArray<Integer> AXIS_TO_AXIS_ID = new SparseArray<>();
+
+        private static void map(int axisId, @NonNull AxisEvent event,
+                                @NonNull SkyController1Gamepad.Axis axis) {
+            AXIS_ID_TO_EVENT.put(axisId, event);
+            EVENT_TO_AXIS_ID.put(event.ordinal(), axisId);
+            AXIS_ID_TO_AXIS.put(axisId, axis);
+            AXIS_TO_AXIS_ID.put(axis.ordinal(), axisId);
+        }
+
+        static {
+            map(0, AxisEvent.TOP_LEFT_HORIZONTAL,  SkyController1Gamepad.Axis.TOP_LEFT_HORIZONTAL);
+            map(1, AxisEvent.TOP_LEFT_VERTICAL,    SkyController1Gamepad.Axis.TOP_LEFT_VERTICAL);
+            map(2, AxisEvent.RIGHT_STICK_HORIZONTAL, SkyController1Gamepad.Axis.RIGHT_STICK_HORIZONTAL);
+            map(3, AxisEvent.RIGHT_STICK_VERTICAL,  SkyController1Gamepad.Axis.RIGHT_STICK_VERTICAL);
+            map(4, AxisEvent.LEFT_STICK_HORIZONTAL,  SkyController1Gamepad.Axis.LEFT_STICK_HORIZONTAL);
+            map(5, AxisEvent.LEFT_STICK_VERTICAL,   SkyController1Gamepad.Axis.LEFT_STICK_VERTICAL);
+            map(6, AxisEvent.TOP_RIGHT_HORIZONTAL,  SkyController1Gamepad.Axis.TOP_RIGHT_HORIZONTAL);
+            map(7, AxisEvent.TOP_RIGHT_VERTICAL,    SkyController1Gamepad.Axis.TOP_RIGHT_VERTICAL);
+        }
+    }
+
+    // ---- No-op Translator ----
+
+    /**
+     * No-op {@link NavigationEventTranslator} for SC1.
+     * <p>
+     * <strong>Verdict #7:</strong> The old {@code Sc1Gamepad.Translator} used mapper bitmask positions
+     * (bits 4–7, 2–3) that are never populated for SC1 (SC1 uses raw Android keycodes, not mapper grab
+     * bits). VirtualGamepad navigation via the mapper grab path is therefore non-functional on SC1 today.
+     * Replacing the translator with this no-op makes the unsupported state explicit: the base class
+     * VirtualGamepad backend will still call {@code grabNavigation()}, but the resulting grab command
+     * will carry zero masks and have no effect.
+     */
+    private static final class NoOpTranslator implements NavigationEventTranslator {
 
         @ButtonMask
         @Override
         public long getNavigationGrabButtonsMask() {
-            return BUTTONS_MASK;
+            return 0;
         }
 
         @AxisMask
         @Override
         public long getNavigationGrabAxesMask() {
-            return AXES_MASK;
+            return 0;
         }
 
+        @Nullable
         @Override
-        @Nullable
         public VirtualGamepad.Event eventFrom(@ButtonMask long buttonMask) {
-            VirtualGamepad.Event event = EVENTS.get(buttonMask);
-            if (event == null) {
-                ULog.w(TAG_GAMEPAD, "Not a navigation button: " + Long.toBinaryString(buttonMask));
-            }
-            return event;
-        }
-
-        /** VirtualGamepad navigation events, by Mapper button mask. */
-        private static final LongSparseArray<VirtualGamepad.Event> EVENTS = new LongSparseArray<>();
-
-        static {
-            EVENTS.put(MASK_BUTTON_4, VirtualGamepad.Event.LEFT);
-            EVENTS.put(MASK_BUTTON_5, VirtualGamepad.Event.RIGHT);
-            EVENTS.put(MASK_BUTTON_6, VirtualGamepad.Event.UP);
-            EVENTS.put(MASK_BUTTON_7, VirtualGamepad.Event.DOWN);
-            EVENTS.put(MASK_BUTTON_2, VirtualGamepad.Event.CANCEL);
-            EVENTS.put(MASK_BUTTON_3, VirtualGamepad.Event.OK);
-        }
-    }
-
-    /** Converts mapper buttons to/from ButtonEvent. */
-    @VisibleForTesting
-    static final class ButtonEvents {
-
-        /**
-         * Translates a Mapper button to its gamepad button event equivalent.
-         *
-         * @param buttonMask mask of the Mapper button to convert
-         *
-         * @return the corresponding button event, or {@code null} if the provided mapper button cannot be translated
-         */
-        @Nullable
-        static ButtonEvent eventFrom(long buttonMask) {
-            ButtonEvent buttonEvent = GSDK_BUTTON_EVENTS.get(buttonMask);
-            if (buttonEvent == null) {
-                ULog.w(TAG_GAMEPAD, "Unsupported button " + Long.toBinaryString(buttonMask));
-            }
-            return buttonEvent;
-        }
-
-        /**
-         * Translates Mapper buttons to their gamepad button events equivalent.
-         *
-         * @param buttonsMask mask of Mapper buttons to convert
-         *
-         * @return a new set containing the corresponding button events, or {@code null} if <strong>ANY</strong> of the
-         *         provided mapper buttons cannot be translated
-         */
-        @Nullable
-        static EnumSet<ButtonEvent> eventsFrom(long buttonsMask) {
-            EnumSet<ButtonEvent> buttonEvents = EnumSet.noneOf(ButtonEvent.class);
-//            while (buttonsMask != 0) {
-//                long buttonMask = Long.lowestOneBit(buttonsMask);
-                ButtonEvent buttonEvent = eventFrom(buttonsMask);
-                if (buttonEvent == null) {
-                    return null;
-                }
-                buttonEvents.add(buttonEvent);
-//                buttonsMask ^= buttonMask;
-//            }
-            return buttonEvents;
-        }
-
-        /**
-         * Translates Mapper buttons and their press states to their gamepad button events equivalent (with their button
-         * event state).
-         * <p>
-         * Note that unlike {@link #eventsFrom(long)} method, this does not return null if one of the provided mapper
-         * buttons cannot be translated. Instead, there will simply not be any entry for that button in the returned
-         * map.
-         *
-         * @param buttonsMask mask of Mapper buttons to convert
-         * @param statesMask  mask of pressed Mapper buttons
-         *
-         * @return a new map of the corresponding button event states, by button event.
-         */
-        @NonNull
-        static EnumMap<ButtonEvent, ButtonEvent.State> statesFrom(@ButtonMask long buttonsMask,
-                                                                  @ButtonMask long statesMask) {
-            EnumMap<ButtonEvent, ButtonEvent.State> states = new EnumMap<>(ButtonEvent.class);
-            while (buttonsMask != 0) {
-                @ButtonMask long buttonMask = Long.lowestOneBit(buttonsMask);
-                ButtonEvent buttonEvent = eventFrom(buttonMask);
-                if (buttonEvent != null) {
-                    states.put(buttonEvent,
-                            (statesMask & buttonMask) == 0 ? ButtonEvent.State.RELEASED : ButtonEvent.State.PRESSED);
-                }
-                buttonsMask ^= buttonMask;
-            }
-            return states;
-        }
-
-        /**
-         * Translates gamepad ButtonEvents to their Mapper buttons equivalent.
-         *
-         * @param buttonEvents set of gamepad ButtonEvents to convert
-         *
-         * @return a mask of the corresponding Mapper buttons
-         */
-        @ButtonMask
-        static long maskFrom(@NonNull Set<ButtonEvent> buttonEvents) {
-            @ButtonMask long buttonsMask = 0;
-            for (ButtonEvent buttonEvent : buttonEvents) {
-                @ButtonMask long buttonMask = ARSDK_BUTTON_MASKS.get(buttonEvent.ordinal());
-                buttonsMask |= buttonMask;
-            }
-            return buttonsMask;
-        }
-
-        /**
-         * Private constructor for static utility class.
-         */
-        private ButtonEvents() {
-        }
-
-        /** ARSDK button mask, by GSDK ButtonEvent ordinal. */
-        private static final SparseArray<Long> ARSDK_BUTTON_MASKS = new SparseArray<>();
-
-        /** GSDK ButtonEvent, by ARSDK button mask. */
-        private static final LongSparseArray<ButtonEvent> GSDK_BUTTON_EVENTS = new LongSparseArray<>();
-
-        /**
-         * Maps an ARSDK button and a GSDK ButtonEvent together, both ways.
-         *
-         * @param buttonMask  mask of ARSDK button to map
-         * @param buttonEvent GSDK ButtonEvent to map
-         */
-        private static void map(long buttonMask, @NonNull ButtonEvent buttonEvent) {
-            GSDK_BUTTON_EVENTS.put(buttonMask, buttonEvent);
-            ARSDK_BUTTON_MASKS.put(buttonEvent.ordinal(), buttonMask);
-        }
-
-        static {
-            map(104, ButtonEvent.BACK);
-            map(99, ButtonEvent.EMERGENCY);
-            map(103, ButtonEvent.HOME);
-            map(96, ButtonEvent.LEFT_MINI_JS);
-            map(98, ButtonEvent.RECORD);
-            map(97, ButtonEvent.RETURN_HOME);
-            map(100, ButtonEvent.RIGHT_MINI_JS);
-            map(101, ButtonEvent.TAKEOFF_LAND);
-//            map(0, ButtonEvent.NO_ACTION);
-        }
-    }
-
-    /** Converts mapper axis to/from AxisEvent. */
-    @VisibleForTesting
-    static final class AxisEvents {
-
-        /**
-         * Translates a Mapper axis to its gamepad axis event equivalent.
-         *
-         * @param axisMask mask of the Mapper axis to convert
-         *
-         * @return the corresponding axis event, or {@code null} if the provided mapper axis cannot be translated
-         */
-        @Nullable
-        static AxisEvent eventFrom(long axisMask) {
-            AxisEvent axisEvent = GSDK_AXIS_EVENTS.get(axisMask);
-            if (axisEvent == null) {
-                ULog.w(TAG_GAMEPAD, "Unsupported axis " + Long.toBinaryString(axisMask));
-            }
-            return axisEvent;
-        }
-
-        /**
-         * Translates a gamepad AxisEvent to its Mapper axis equivalent.
-         *
-         * @param axisEvent gamepad AxisEvent to convert
-         *
-         * @return a mask of the corresponding Mapper axis
-         */
-        @AxisMask
-        static long maskFrom(@NonNull AxisEvent axisEvent) {
-            @AxisMask long axisMask = ARSDK_AXIS_MASKS.get(axisEvent.ordinal());
-            return axisMask;
-        }
-
-        /**
-         * Private constructor for static utility class.
-         */
-        private AxisEvents() {
-        }
-
-        /** ARSDK axis mask, by GSDK AxisEvent ordinal. */
-        private static final SparseArray<Long> ARSDK_AXIS_MASKS = new SparseArray<>();
-
-        /** GSDK AxisEvent, by ARSDK axis mask. */
-        private static final LongSparseArray<AxisEvent> GSDK_AXIS_EVENTS = new LongSparseArray<>();
-
-        /**
-         * Maps an ARSDK axis and a GSDK AxisEvent together, both ways.
-         *
-         * @param axisMask  mask of ARSDK axis to map
-         * @param axisEvent GSDK AxisEvent to map
-         */
-        private static void map(long axisMask, @NonNull AxisEvent axisEvent) {
-            GSDK_AXIS_EVENTS.put(axisMask, axisEvent);
-            ARSDK_AXIS_MASKS.put(axisEvent.ordinal(), axisMask);
-        }
-
-        static {
-            map(0, AxisEvent.TOP_LEFT_HORIZONTAL);
-            map(1, AxisEvent.TOP_LEFT_VERTICAL);
-            map(2, AxisEvent.RIGHT_STICK_HORIZONTAL);
-            map(3, AxisEvent.RIGHT_STICK_VERTICAL);
-            map(4, AxisEvent.LEFT_STICK_HORIZONTAL);
-            map(5, AxisEvent.LEFT_STICK_VERTICAL);
-            map(6, AxisEvent.TOP_RIGHT_HORIZONTAL);
-            map(7, AxisEvent.TOP_RIGHT_VERTICAL);
-        }
-    }
-
-    /** Converts mapper buttons/axes to/from gamepad Input. */
-    @VisibleForTesting
-    static final class InputMasks {
-
-        /** Mask of all Mapper buttons the associated Input represents. */
-        @ButtonMask
-        final long mButtons;
-
-        /** Mask of all Mapper axes the associated Input represents. */
-        @AxisMask
-        final long mAxes;
-
-        /**
-         * Gets Mapper buttons/axes associated to a gamepad button.
-         *
-         * @param button gamepad button to get mask info for
-         *
-         * @return the button's info structure, containing the corresponding Mapper buttons and/or axes masks
-         */
-//        @NonNull
-        static InputMasks of(@NonNull SkyController3Gamepad.Button button) {
-            //noinspection ConstantConditions: map is complete
-            return ARSDK_BUTTONS_MASKS.get(button);
-        }
-
-        /**
-         * Gets Mapper buttons/axes associated to a gamepad axis.
-         *
-         * @param axis gamepad axis to get mask info for
-         *
-         * @return the axis' info structure, containing the corresponding Mapper buttons and/or axes masks
-         */
-//        @NonNull
-        static InputMasks of(@NonNull SkyController3Gamepad.Axis axis) {
-            //noinspection ConstantConditions: map is complete
-            return ARSDK_AXES_MASKS.get(axis);
-        }
-
-        /**
-         * Gets a SkyController3 gamepad axis from its ARSDK Mapper mask representation.
-         *
-         * @param axisMask mask of the axis to retrieve.
-         *
-         * @return the corresponding gamepad axis, or {@code null} if the mask does not correspond to any known axis
-         */
-        @Nullable
-        static SkyController3Gamepad.Axis axisFrom(@AxisMask long axisMask) {
-            SkyController3Gamepad.Axis axis = GSDK_AXES.get(axisMask);
-            if (axis == null) {
-                ULog.w(TAG_GAMEPAD, "Unsupported axis " + Long.toBinaryString(axisMask));
-            }
-            return axis;
-        }
-
-        /**
-         * Collects all Mapper buttons/axes associated to multiple gamepad inputs.
-         *
-         * @param buttons set of gamepad buttons to get mask info for
-         * @param axes    set of gamepad axes to get mask info for
-         *
-         * @return an info structure containing buttons and/or axes masks corresponding to all the provided inputs
-         */
-        static InputMasks collect(@NonNull Set<SkyController3Gamepad.Button> buttons,
-                                  @NonNull Set<SkyController3Gamepad.Axis> axes) {
-            long buttonsMask = 0;
-            long axesMask = 0;
-
-            for (SkyController3Gamepad.Button button : buttons) {
-                InputMasks info = of(button);
-                if (info != null) {
-                    buttonsMask |= info.mButtons;
-                    axesMask |= info.mAxes;
-                }
-            }
-
-            for (SkyController3Gamepad.Axis axis : axes) {
-                InputMasks info = of(axis);
-                if (info != null) {
-                    buttonsMask |= info.mButtons;
-                    axesMask |= info.mAxes;
-                }
-            }
-
-            return new InputMasks(buttonsMask, axesMask);
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param buttons mask of Mapper buttons
-         * @param axes    mask of Mapper axes
-         */
-        private InputMasks(@ButtonMask long buttons, @AxisMask long axes) {
-            mButtons = buttons;
-            mAxes = axes;
-        }
-
-        /** InputInfo, by gamepad Button. */
-        private static final EnumMap<SkyController3Gamepad.Button, InputMasks> ARSDK_BUTTONS_MASKS =
-                new EnumMap<>(SkyController3Gamepad.Button.class);
-
-        /** InputInfo, by gamepad Axis. */
-        private static final EnumMap<SkyController3Gamepad.Axis, InputMasks> ARSDK_AXES_MASKS =
-                new EnumMap<>(SkyController3Gamepad.Axis.class);
-
-        /** GSDK Axis, by ARSDK axis mask. */
-        private static final LongSparseArray<SkyController3Gamepad.Axis> GSDK_AXES = new LongSparseArray<>();
-
-        /**
-         * Maps a GSDK gamepad button to a mask of ARSDK Mapper buttons.
-         *
-         * @param button      gamepad button to map
-         * @param buttonsMask mask of ARSDK Mapper buttons to associate with the input
-         */
-        private static void map(@NonNull SkyController3Gamepad.Button button, long buttonsMask) {
-            ARSDK_BUTTONS_MASKS.put(button, new InputMasks(buttonsMask, 0));
-        }
-
-        /**
-         * Maps a GSDK gamepad axis to a mask of ARSDK Mapper buttons and a mask of ARSDK Mapper axes.
-         *
-         * @param axis        gamepad axis to map
-         * @param buttonsMask mask of ARSDK Mapper buttons to associate with the input
-         * @param axesMask    mask of ARSDK Mapper axes to associate with the input
-         */
-        private static void map(@NonNull SkyController3Gamepad.Axis axis, long buttonsMask,
-                                long axesMask) {
-            ARSDK_AXES_MASKS.put(axis, new InputMasks(buttonsMask, axesMask));
-            GSDK_AXES.put(axesMask, axis);
-        }
-
-        static {
-            map(SkyController3Gamepad.Button.BACK, 104);
-            map(SkyController3Gamepad.Button.EMERGENCY, 99);
-            map(SkyController3Gamepad.Button.HOME, 103);
-            map(SkyController3Gamepad.Button.LEFT_MINI_JS, 96);
-            map(SkyController3Gamepad.Button.RECORD, 98);
-            map(SkyController3Gamepad.Button.RETURN_HOME, 97);
-            map(SkyController3Gamepad.Button.RIGHT_MINI_JS, 100);
-            map(SkyController3Gamepad.Button.TAKEOFF_LAND, 101);
-
-            map(SkyController3Gamepad.Axis.TOP_LEFT_HORIZONTAL, 0, 0);
-            map(SkyController3Gamepad.Axis.TOP_LEFT_VERTICAL, 0, 1);
-            map(SkyController3Gamepad.Axis.RIGHT_STICK_HORIZONTAL, 0, 2);
-            map(SkyController3Gamepad.Axis.RIGHT_STICK_VERTICAL, 0, 3);
-            map(SkyController3Gamepad.Axis.LEFT_STICK_HORIZONTAL, 0, 4);
-            map(SkyController3Gamepad.Axis.LEFT_STICK_VERTICAL, 0, 5);
-            map(SkyController3Gamepad.Axis.TOP_RIGHT_HORIZONTAL, 0, 6);
-            map(SkyController3Gamepad.Axis.TOP_RIGHT_VERTICAL, 0, 7);
+            return null;
         }
     }
 }

@@ -155,19 +155,6 @@ public interface SkyController3Gamepad extends Peripheral {
          * </ul>
          */
         REAR_RIGHT_BUTTON,
-
-        HOME,
-        RIGHT_MINI_JS,
-        TAKEOFF_LAND,
-        RECORD,
-        EMERGENCY,
-        LEFT_MINI_JS,
-        RETURN_HOME,
-        BACK,
-
-        SETTINGS,
-        BUTTON_B,
-        BUTTON_A,
     }
 
     /** A physical axis input that can be grabbed on SkyController3 gamepad. */
@@ -228,11 +215,6 @@ public interface SkyController3Gamepad extends Peripheral {
          * {@link AxisEvent#RIGHT_SLIDER} events when grabbed.
          */
         RIGHT_SLIDER,
-
-        TOP_LEFT_HORIZONTAL,
-        TOP_LEFT_VERTICAL,
-        TOP_RIGHT_HORIZONTAL,
-        TOP_RIGHT_VERTICAL
     }
 
     /**

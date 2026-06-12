@@ -30,7 +30,9 @@
  *
  */
 
-package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller;
+package com.parrot.drone.groundsdk.device.peripheral.gamepad.skycontroller1;
+
+import androidx.annotation.NonNull;
 
 import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.device.peripheral.gamepad.ButtonsMappableAction;
@@ -39,11 +41,13 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
-import androidx.annotation.NonNull;
-
 /**
- * A mapping entry that defines a {@link ButtonsMappableAction} to be triggered when the gamepad inputs produce
- * a set of {@link ButtonEvent button events} in the {@link ButtonEvent.State#PRESSED pressed} state.
+ * A mapping entry that defines a {@link ButtonsMappableAction} to be triggered when a
+ * {@link ButtonEvent button event} is produced in the {@link ButtonEvent.State#PRESSED pressed} state.
+ * <p>
+ * For SkyController 1, each button maps to exactly one keycode integer via the
+ * {@code skyctrl.ButtonMappings.SetButtonMapping} protocol. The {@code buttonEvents} set is therefore
+ * typically a singleton, though the API accepts sets for consistency with SC2/SC3.
  */
 public final class ButtonsMappingEntry extends MappingEntry {
 
@@ -58,15 +62,16 @@ public final class ButtonsMappingEntry extends MappingEntry {
     /**
      * Constructor.
      *
-     * @param droneModel   drone model onto which the entry should apply
+     * @param droneModel   drone model onto which the entry should apply (use {@link Drone.Model#UNKNOWN} for SC1)
      * @param action       action to be triggered
-     * @param buttonEvents event set that triggers the action
+     * @param buttonEvents set of button events that trigger the action; typically a singleton for SC1
      */
-    public ButtonsMappingEntry(@NonNull Drone.Model droneModel, @NonNull ButtonsMappableAction action,
+    public ButtonsMappingEntry(@NonNull Drone.Model droneModel,
+                               @NonNull ButtonsMappableAction action,
                                @NonNull Set<ButtonEvent> buttonEvents) {
         super(Type.BUTTONS_MAPPING, droneModel);
         mAction = action;
-        mButtonEvents = buttonEvents.isEmpty() ? Collections.emptySet()
+        mButtonEvents = buttonEvents.isEmpty() ? Collections.<ButtonEvent>emptySet()
                 : Collections.unmodifiableSet(EnumSet.copyOf(buttonEvents));
     }
 
@@ -81,11 +86,11 @@ public final class ButtonsMappingEntry extends MappingEntry {
     }
 
     /**
-     * Gets the set of button events that triggers the action when pressed.
+     * Gets the set of button events that trigger the action when pressed.
      * <p>
-     * The application gets a read only view of those events, which cannot be modified.
+     * The returned set is read-only and cannot be modified.
      *
-     * @return set of button event that triggers the action
+     * @return set of button events that trigger the action
      */
     @NonNull
     public Set<ButtonEvent> getButtonEvents() {
