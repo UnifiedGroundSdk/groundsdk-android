@@ -77,9 +77,15 @@ static int source_open(const struct sdkcore_source *source, struct pdraw *pdraw)
 
 	char *url = NULL;
 
-	// SMS 12/15/2019
+	/* "net/rtsp/mambo": Miniature (Mambo/Rolling Spider) direct Wi-Fi connection.
+	 * The drone's IP is obtained from the discovery info; the RTSP resource
+	 * path "media/stream2" is fixed by the drone firmware.  Standard RTSP
+	 * port 554 is assumed (no port in the host component; pdraw's startRtsp()
+	 * splits on the first '/' after "rtsp://" to get the host and path).
+	 * Previously hardcoded to 192.168.99.1 (Mambo AP default) which broke
+	 * any connection where the drone is assigned a different address. */
 	if (strcmp(self->url, "net/rtsp/mambo") == 0) {
-		res = asprintf(&url, "rtsp://%s/%s", "192.168.99.1", "media/stream2") == -1 ? -ENOMEM : 0;
+		res = asprintf(&url, "rtsp://%s/%s", info->addr, "media/stream2") == -1 ? -ENOMEM : 0;
 		GOTO_IF_ERR(res, out);
 
 	} else if (strcmp(self->url, "net/arstream2") == 0)  {
