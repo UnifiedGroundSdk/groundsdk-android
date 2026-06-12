@@ -42,7 +42,7 @@ import androidx.annotation.NonNull;
 
 import static com.parrot.drone.groundsdk.arsdkengine.devicecontroller.MiniatureFamilyDroneController.setFromQuaternion2;
 
-/** Attitude indicator instrument controller for Anafi family drones. */
+/** Attitude indicator instrument controller for Miniature family drones. */
 public class MiniatureAttitudeIndicator extends DroneInstrumentController {
 
     /** The attitude indicator from which this object is the backend. */

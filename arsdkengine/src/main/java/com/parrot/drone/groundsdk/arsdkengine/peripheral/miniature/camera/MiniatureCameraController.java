@@ -59,7 +59,7 @@ import java.util.Set;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** Camera peripheral(s) controller for Anafi family drones. */
+/** Camera peripheral(s) controller for Miniature family drones. */
 public final class MiniatureCameraController extends DronePeripheralController {
 
     private MainCameraCore mCameraCore;

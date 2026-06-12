@@ -41,7 +41,7 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import androidx.annotation.NonNull;
 
-/** Radio instrument controller for Anafi family drones. */
+/** Radio instrument controller for Bebop family drones. */
 public class BebopRadio extends DroneInstrumentController {
 
     /** The radio instrument from which this object is the backend. */

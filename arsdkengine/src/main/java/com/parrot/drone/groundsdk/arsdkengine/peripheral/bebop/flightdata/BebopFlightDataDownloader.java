@@ -49,7 +49,7 @@ import java.util.Queue;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** FlightDataDownloader peripheral controller for Anafi family drones. */
+/** FlightDataDownloader peripheral controller for Bebop family drones. */
 public final class BebopFlightDataDownloader extends PeripheralController<DeviceController<?>> {
 
     /**

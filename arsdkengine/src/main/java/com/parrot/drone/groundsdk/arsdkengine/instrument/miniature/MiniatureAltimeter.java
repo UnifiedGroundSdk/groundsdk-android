@@ -40,7 +40,7 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import androidx.annotation.NonNull;
 
-/** Altimeter instrument controller for Anafi family drones. */
+/** Altimeter instrument controller for Miniature family drones. */
 public class MiniatureAltimeter extends DroneInstrumentController {
 
     /** The altimeter from which this object is the backend. */

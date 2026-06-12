@@ -77,7 +77,7 @@ import java.util.Date;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** Drone controller for all drones of the Anafi family. */
+/** Drone controller for all drones of the Miniature family (Mambo). */
 public class MiniatureFamilyDroneController extends DroneController {
 
     /**

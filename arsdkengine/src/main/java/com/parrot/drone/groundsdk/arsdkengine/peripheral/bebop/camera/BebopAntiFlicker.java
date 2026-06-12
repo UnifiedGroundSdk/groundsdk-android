@@ -49,7 +49,7 @@ import java.util.EnumSet;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** AntiFlicker peripheral controller for Anafi family drones. */
+/** AntiFlicker peripheral controller for Bebop family drones. */
 public final class BebopAntiFlicker extends DronePeripheralController {
 
     /** Key used to access preset and range dictionaries for this peripheral controller. */

@@ -45,7 +45,7 @@ import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import androidx.annotation.NonNull;
 
-/** GPS instrument controller for Anafi family drones. */
+/** GPS instrument controller for Miniature family drones. */
 public class MiniatureGps extends DroneInstrumentController implements SystemLocation.Monitor {
 
     private final MiniatureGps miniatureGps;

@@ -43,7 +43,7 @@ import androidx.annotation.Nullable;
 
 import static com.parrot.drone.sdkcore.arsdk.device.ArsdkDevice.LIVE_URL;
 
-/** StreamServer peripheral controller for Anafi family drones. */
+/** StreamServer peripheral controller for Miniature family drones. */
 public class MiniatureStreamServer extends DronePeripheralController {
 
     /** StreamServer peripheral for which this object is the backend. */

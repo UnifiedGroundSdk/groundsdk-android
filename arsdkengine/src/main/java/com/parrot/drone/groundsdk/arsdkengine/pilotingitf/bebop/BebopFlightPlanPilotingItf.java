@@ -54,7 +54,7 @@ import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_FLIGHTPLAN;
 
-/** FlightPlan piloting interface controller for Anafi family drones. */
+/** FlightPlan piloting interface controller for Bebop family drones. */
 public class BebopFlightPlanPilotingItf extends ActivablePilotingItfController {
 
     /** Key used to access preset and range dictionaries for this piloting interface settings. */

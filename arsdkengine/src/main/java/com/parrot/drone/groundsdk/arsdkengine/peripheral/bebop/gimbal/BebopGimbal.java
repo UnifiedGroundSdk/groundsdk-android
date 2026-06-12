@@ -50,7 +50,7 @@ import java.util.EnumSet;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** Gimbal peripheral controller for Anafi family drones. */
+/** Gimbal peripheral controller for Bebop family drones. */
 public final class BebopGimbal extends DronePeripheralController {
 
     /** Key used to access preset and range dictionaries for this peripheral settings. */

@@ -43,7 +43,7 @@ import java.util.EnumSet;
 
 import androidx.annotation.NonNull;
 
-/** RemovableUserStorage peripheral controller for Anafi family drones. */
+/** RemovableUserStorage peripheral controller for Bebop family drones. */
 public class BebopRemovableUserStorage extends DronePeripheralController {
 
     /** The removable user storage from which this object is the backend. */

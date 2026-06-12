@@ -58,7 +58,7 @@ import java.util.regex.Pattern;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** MediaStore peripheral controller for Anafi family drones. */
+/** MediaStore peripheral controller for Bebop family drones. */
 public final class BebopMediaStore extends DronePeripheralController {
 
 //    @NonNull

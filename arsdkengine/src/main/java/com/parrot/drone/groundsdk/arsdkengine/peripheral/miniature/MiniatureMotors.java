@@ -45,7 +45,7 @@ import com.parrot.drone.sdkcore.ulog.ULog;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG;
 
-/** CopterMotors peripheral controller for Anafi family drones. */
+/** CopterMotors peripheral controller for Miniature family drones. */
 public final class MiniatureMotors extends DronePeripheralController {
 
     /** CopterMotors peripheral for which this object is the backend. */

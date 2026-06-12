@@ -47,7 +47,7 @@ import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG;
 
-/** RemovableUserStorage peripheral controller for Anafi family drones. */
+/** RemovableUserStorage peripheral controller for Miniature family drones. */
 public class MiniatureRemovableUserStorage extends DronePeripheralController {
 
     /** The removable user storage from which this object is the backend. */

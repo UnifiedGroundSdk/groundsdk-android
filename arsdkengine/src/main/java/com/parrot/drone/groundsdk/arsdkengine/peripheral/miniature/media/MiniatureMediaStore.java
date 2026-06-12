@@ -53,7 +53,7 @@ import androidx.annotation.Nullable;
 
 import static com.parrot.drone.groundsdk.arsdkengine.Logging.TAG_MEDIA;
 
-/** MediaStore peripheral controller for Anafi family drones. */
+/** MediaStore peripheral controller for Miniature family drones. */
 public final class MiniatureMediaStore extends DronePeripheralController {
 
     /** The MediaStore peripheral for which this object is the backend. */

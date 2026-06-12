@@ -53,7 +53,7 @@ import java.util.Set;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** AntiFlicker peripheral controller for Anafi family drones. */
+/** AntiFlicker peripheral controller for Miniature family drones. */
 public final class MiniatureAntiFlicker extends DronePeripheralController {
 
     /** Key used to access preset and range dictionaries for this peripheral controller. */

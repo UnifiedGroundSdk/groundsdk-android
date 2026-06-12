@@ -89,7 +89,7 @@ import java.util.Date;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** Drone controller for all drones of the Anafi family. */
+/** Drone controller for all drones of the Bebop family (Bebop 1/2, Disco, Bluegrass). */
 public class BebopFamilyDroneController extends DroneController {
 
     /**
