@@ -34,6 +34,8 @@ package com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.camera;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.DronePeripheralController;
+import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
+import com.parrot.drone.groundsdk.arsdkengine.persistence.StorageEntry;
 import com.parrot.drone.groundsdk.device.peripheral.camera.Camera;
 import com.parrot.drone.groundsdk.device.peripheral.camera.CameraEvCompensation;
 import com.parrot.drone.groundsdk.device.peripheral.camera.CameraExposure;
@@ -60,10 +62,68 @@ import java.util.HashSet;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/** Camera peripheral(s) controller for Anafi family drones. */
+/**
+ * Camera peripheral controller for Bebop/Disco family drones.
+ *
+ * <p><b>Timelapse protocol notes (ardrone3):</b>
+ * Timelapse mode is configured via {@code PictureSettings.TimelapseSelection(enabled, interval)},
+ * but capture is started and stopped via {@code MediaRecord.VideoV2(START/STOP)} — the same
+ * command used for normal video recording. {@code MediaRecord.PictureV2} is only for single-shot
+ * photos. Stopping a timelapse therefore sends {@code VideoV2(STOP)}.
+ *
+ * <p><b>Known firmware-level defects (Bebop/Disco):</b>
+ * Timelapse support has known firmware-level defects on Bebop and Disco hardware as documented in
+ * the community fork README. This controller now speaks the protocol correctly; bench validation
+ * of actual capture behaviour on physical hardware is pending.
+ */
 public final class BebopCameraController extends DronePeripheralController {
 
+    /** Key used to access preset and device dictionaries for this peripheral's settings. */
+    private static final String SETTINGS_KEY = "bebopCamera";
+
+    // preset store entries
+
+    /** Camera mode preset entry (RECORDING or PHOTO). */
+    private static final StorageEntry<Camera.Mode> MODE_PRESET =
+            StorageEntry.ofEnum("mode", Camera.Mode.class);
+
+    /** Recording resolution preset entry. */
+    private static final StorageEntry<CameraRecording.Resolution> RECORDING_RESOLUTION_PRESET =
+            StorageEntry.ofEnum("recordingResolution", CameraRecording.Resolution.class);
+
+    /** Recording framerate preset entry. */
+    private static final StorageEntry<CameraRecording.Framerate> RECORDING_FRAMERATE_PRESET =
+            StorageEntry.ofEnum("recordingFramerate", CameraRecording.Framerate.class);
+
+    /** Photo mode preset entry (SINGLE or TIME_LAPSE). */
+    private static final StorageEntry<CameraPhoto.Mode> PHOTO_MODE_PRESET =
+            StorageEntry.ofEnum("photoMode", CameraPhoto.Mode.class);
+
+    /** EV compensation preset entry. */
+    private static final StorageEntry<CameraEvCompensation> EV_COMPENSATION_PRESET =
+            StorageEntry.ofEnum("evCompensation", CameraEvCompensation.class);
+
+    // device-specific store entries (firmware-reported ranges)
+
+    /**
+     * Firmware EV range device entry (EnumSet of supported CameraEvCompensation values).
+     * <p>Populated from {@code PictureSettingsState.ExpositionChanged(value, min, max)}.
+     * The ardrone3 protocol delivers min/max as floats and does not provide a discrete list,
+     * so we enumerate all CameraEvCompensation values whose float equivalent falls within
+     * [min, max] (0.33-step increments).
+     */
+    private static final StorageEntry<EnumSet<CameraEvCompensation>> EV_RANGE_SETTING =
+            StorageEntry.ofEnumSet("evRange", CameraEvCompensation.class);
+
     private MainCameraCore mCameraCore;
+
+    /** Dictionary containing device-specific values (firmware-reported ranges). */
+    @Nullable
+    private final PersistentStore.Dictionary mDeviceDict;
+
+    /** Dictionary containing current preset values. */
+    @Nullable
+    private PersistentStore.Dictionary mPresetDict;
 
     /**
      * Constructor.
@@ -73,6 +133,10 @@ public final class BebopCameraController extends DronePeripheralController {
     public BebopCameraController(@NonNull DroneController droneController) {
         super(droneController);
         mCameraCore = new MainCameraCore(mComponentStore, mBackend);
+        mDeviceDict = offlineSettingsEnabled()
+                ? mDeviceController.getDeviceDict().getDictionary(SETTINGS_KEY) : null;
+        mPresetDict = offlineSettingsEnabled()
+                ? mDeviceController.getPresetDict().getDictionary(SETTINGS_KEY) : null;
     }
 
     @Override
@@ -116,10 +180,19 @@ public final class BebopCameraController extends DronePeripheralController {
         mCameraCore.whiteBalance().updateSupportedModes(whiteBalanceModes);
         mCameraCore.whiteBalance().updateSupportedTemperatures(EnumSet.noneOf(CameraWhiteBalance.Temperature.class));
 
-        mCameraCore.exposureCompensation().updateAvailableValues(EnumSet.noneOf(CameraEvCompensation.class));
-        mCameraCore.exposureCompensation().updateAvailableValues(EnumSet.allOf(CameraEvCompensation.class));
+        // EV capabilities: use firmware-reported range when available; fall back to full enum.
+        // ardrone3 PictureSettingsState.ExpositionChanged delivers min/max on connect, so the
+        // persisted range (if any) reflects what this firmware actually supports.
+        EnumSet<CameraEvCompensation> evRange = EV_RANGE_SETTING.load(mDeviceDict);
+        if (evRange == null || evRange.isEmpty()) {
+            evRange = EnumSet.allOf(CameraEvCompensation.class);
+        }
+        mCameraCore.exposureCompensation().updateAvailableValues(evRange);
 
-        final CameraRecordingSettingCore recording =  mCameraCore.recording();
+        // Recording capabilities: ardrone3 VideoResolutionsChanged and VideoFramerateChanged
+        // report the current value only, not a supported range. Keep a static capability list
+        // matching what Bebop/Disco hardware supports.
+        final CameraRecordingSettingCore recording = mCameraCore.recording();
         final EnumSet<CameraRecording.Resolution> resolutions = EnumSet.noneOf(CameraRecording.Resolution.class);
 
         resolutions.add(CameraRecording.Resolution.RES_720P);
@@ -159,6 +232,41 @@ public final class BebopCameraController extends DronePeripheralController {
         photo.updateMode(CameraPhoto.Mode.SINGLE);
         photo.updateFormat(CameraPhoto.Format.FULL_FRAME);
         photo.updateFileFormat(CameraPhoto.FileFormat.JPEG);
+
+        // Apply persisted presets so the UI reflects the last user-chosen values while
+        // we wait for the firmware state events to arrive.
+        applyPresets();
+    }
+
+    /**
+     * Applies persisted preset values to the camera core.
+     * <p>Called on connecting (before firmware events arrive) and on preset change.
+     */
+    private void applyPresets() {
+        Camera.Mode mode = MODE_PRESET.load(mPresetDict);
+        if (mode != null) {
+            mCameraCore.mode().updateValue(mode);
+        }
+
+        CameraRecording.Resolution resolution = RECORDING_RESOLUTION_PRESET.load(mPresetDict);
+        if (resolution != null) {
+            mCameraCore.recording().updateResolution(resolution);
+        }
+
+        CameraRecording.Framerate framerate = RECORDING_FRAMERATE_PRESET.load(mPresetDict);
+        if (framerate != null) {
+            mCameraCore.recording().updateFramerate(framerate);
+        }
+
+        CameraPhoto.Mode photoMode = PHOTO_MODE_PRESET.load(mPresetDict);
+        if (photoMode != null) {
+            mCameraCore.photo().updateMode(photoMode);
+        }
+
+        CameraEvCompensation ev = EV_COMPENSATION_PRESET.load(mPresetDict);
+        if (ev != null) {
+            mCameraCore.exposureCompensation().updateValue(ev);
+        }
     }
 
     @Override
@@ -173,10 +281,20 @@ public final class BebopCameraController extends DronePeripheralController {
 
     @Override
     protected void onForgetting() {
+        if (mDeviceDict != null) {
+            mDeviceDict.clear().commit();
+        }
+        mCameraCore.unpublish();
     }
 
     @Override
     protected void onPresetChange() {
+        // Reload the preset dictionary (the underlying store may have switched to a different preset).
+        mPresetDict = mDeviceController.getPresetDict().getDictionary(SETTINGS_KEY);
+        if (isConnected()) {
+            applyPresets();
+        }
+        mCameraCore.notifyUpdated();
     }
 
     @Override
@@ -227,7 +345,25 @@ public final class BebopCameraController extends DronePeripheralController {
 
         @Override
         public void onExpositionChanged(float value, float min, float max) {
+            // Derive the supported EV set from the firmware-reported range.
+            // ardrone3 uses 0.33-step increments; enumerate all CameraEvCompensation values
+            // whose float equivalent falls within [min, max] (inclusive, with a small epsilon
+            // to guard against floating-point rounding).
+            final float EV_EPSILON = 0.01f;
+            final EnumSet<CameraEvCompensation> supported =
+                    EnumSet.noneOf(CameraEvCompensation.class);
+            for (CameraEvCompensation ev : CameraEvCompensation.values()) {
+                float f = ExposureAdapter.from(ev);
+                if (f >= min - EV_EPSILON && f <= max + EV_EPSILON) {
+                    supported.add(ev);
+                }
+            }
+            if (!supported.isEmpty()) {
+                EV_RANGE_SETTING.save(mDeviceDict, supported);
+                mCameraCore.exposureCompensation().updateAvailableValues(supported);
+            }
             mCameraCore.exposureCompensation().updateValue(ExposureAdapter.from(value));
+            EV_COMPENSATION_PRESET.save(mPresetDict, ExposureAdapter.from(value));
             mCameraCore.notifyUpdated();
         }
 
@@ -245,11 +381,10 @@ public final class BebopCameraController extends DronePeripheralController {
 
             mCameraCore.photo().updateTimelapseInterval(interval);
 
-            if (enabled == 1) {
-                mCameraCore.photo().updateMode(CameraPhoto.Mode.TIME_LAPSE);
-            } else {
-                mCameraCore.photo().updateMode(CameraPhoto.Mode.SINGLE);
-            }
+            final CameraPhoto.Mode photoMode =
+                    enabled == 1 ? CameraPhoto.Mode.TIME_LAPSE : CameraPhoto.Mode.SINGLE;
+            mCameraCore.photo().updateMode(photoMode);
+            PHOTO_MODE_PRESET.save(mPresetDict, photoMode);
 
             mCameraCore.notifyUpdated();
         }
@@ -272,14 +407,18 @@ public final class BebopCameraController extends DronePeripheralController {
         @Override
         public void onVideoFramerateChanged(@Nullable ArsdkFeatureArdrone3.PicturesettingsstateVideoframeratechangedFramerate framerate) {
             if (framerate == null) return;
-            mCameraCore.recording().updateFramerate(FramerateAdapter.from(framerate));
+            final CameraRecording.Framerate fr = FramerateAdapter.from(framerate);
+            mCameraCore.recording().updateFramerate(fr);
+            RECORDING_FRAMERATE_PRESET.save(mPresetDict, fr);
             mCameraCore.notifyUpdated();
         }
 
         @Override
         public void onVideoResolutionsChanged(@Nullable ArsdkFeatureArdrone3.PicturesettingsstateVideoresolutionschangedType type) {
             if (type == null) return;
-            mCameraCore.recording().updateResolution(ResolutionAdapter.from(type));
+            final CameraRecording.Resolution res = ResolutionAdapter.from(type);
+            mCameraCore.recording().updateResolution(res);
+            RECORDING_RESOLUTION_PRESET.save(mPresetDict, res);
             mCameraCore.notifyUpdated();
         }
     };
@@ -556,13 +695,20 @@ public final class BebopCameraController extends DronePeripheralController {
 
         @Override
         public boolean setMode(@NonNull Camera.Mode mode) {
-            mCameraCore.mode().updateValue(mode);
-            mCameraCore.notifyUpdated();
+            // ardrone3 has no explicit "set camera mode" command; mode is implicit from the
+            // timelapse-enabled state reported by PictureSettingsState.TimelapseChanged.
+            // Persist the preference so it survives reconnect. Do NOT call updateValue or
+            // notifyUpdated here — the SettingController rollback contract requires the backend
+            // to return true only when a command was sent (and confirmation will arrive later).
+            // Since no command is sent, return false and let the firmware-confirmed
+            // onTimelapseChanged event drive the mode update via updateValue.
+            MODE_PRESET.save(mPresetDict, mode);
             return false;
         }
 
         @Override
         public boolean setEvCompensation(@NonNull CameraEvCompensation ev) {
+            EV_COMPENSATION_PRESET.save(mPresetDict, ev);
             return sendCommand(ArsdkFeatureArdrone3.PictureSettings.encodeExpositionSelection(ExposureAdapter.from(ev)));
         }
 
@@ -578,11 +724,26 @@ public final class BebopCameraController extends DronePeripheralController {
 
         @Override
         public boolean startPhotoCapture() {
+            if (mCameraCore.photo().mode() == CameraPhoto.Mode.TIME_LAPSE) {
+                // Timelapse capture is started via VideoV2 START (same as normal video).
+                // PictureV2 is single-shot only and must not be sent for timelapse mode.
+                return sendCommand(ArsdkFeatureArdrone3.MediaRecord.encodeVideoV2(
+                        ArsdkFeatureArdrone3.MediarecordVideov2Record.START));
+            }
+            // SINGLE (and any other non-timelapse mode): single shot via PictureV2.
             return sendCommand(ArsdkFeatureArdrone3.MediaRecord.encodePictureV2());
         }
 
         @Override
         public boolean stopPhotoCapture() {
+            if (mCameraCore.photo().mode() == CameraPhoto.Mode.TIME_LAPSE) {
+                // Timelapse capture is stopped via VideoV2 STOP. There is no separate
+                // "stop timelapse" command; disabling timelapse mode via TimelapseSelection
+                // configures the mode but does not stop an in-progress capture.
+                return sendCommand(ArsdkFeatureArdrone3.MediaRecord.encodeVideoV2(
+                        ArsdkFeatureArdrone3.MediarecordVideov2Record.STOP));
+            }
+            // Single-shot photos complete atomically; no stop command is needed.
             return false;
         }
 

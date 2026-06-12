@@ -115,34 +115,34 @@ public final class BebopFlightDataDownloader extends PeripheralController<Device
 
     @Override
     protected void onDataSyncAllowanceChanged(boolean allowed) {
-//        if (allowed) {
-//            mHttpClient = mDeviceController.getHttpClient(HttpPudClient.class);
-//            if (mHttpClient != null) {
-//                mPendingPuds.clear();
-//                mDownloadedCount = 0;
-//                mHttpClient.listPuds((status, code, puds) -> {
-//                    if (status != HttpRequest.Status.SUCCESS) {
-//                        return;
-//                    }
-//                    // validate received puds
-//                    if (puds != null) for (HttpPudInfo pud : puds) {
-//                        if (HttpPudInfo.isValid(pud)) {
-//                            mPendingPuds.add(pud);
-//                        }
-//                    }
-//                    if (!mPendingPuds.isEmpty()) {
-//                        mDownloader.updateDownloadingFlag(true)
-//                                   .updateCompletionStatus(FlightDataDownloader.CompletionStatus.NONE)
-//                                   .updateDownloadedCount(0)
-//                                   .notifyUpdated();
-//                        downloadNextPud();
-//                    }
-//                });
-//            }
-//        } else if (mHttpClient != null) {
-//            mHttpClient.dispose();
-//            mHttpClient = null;
-//        }
+        if (allowed) {
+            mHttpClient = mDeviceController.getHttpClient(HttpPudClient.class);
+            if (mHttpClient != null) {
+                mPendingPuds.clear();
+                mDownloadedCount = 0;
+                mHttpClient.listPuds((status, code, puds) -> {
+                    if (status != HttpRequest.Status.SUCCESS) {
+                        return;
+                    }
+                    // validate received puds
+                    if (puds != null) for (HttpPudInfo pud : puds) {
+                        if (HttpPudInfo.isValid(pud)) {
+                            mPendingPuds.add(pud);
+                        }
+                    }
+                    if (!mPendingPuds.isEmpty()) {
+                        mDownloader.updateDownloadingFlag(true)
+                                   .updateCompletionStatus(FlightDataDownloader.CompletionStatus.NONE)
+                                   .updateDownloadedCount(0)
+                                   .notifyUpdated();
+                        downloadNextPud();
+                    }
+                });
+            }
+        } else if (mHttpClient != null) {
+            mHttpClient.dispose();
+            mHttpClient = null;
+        }
     }
 
     /**

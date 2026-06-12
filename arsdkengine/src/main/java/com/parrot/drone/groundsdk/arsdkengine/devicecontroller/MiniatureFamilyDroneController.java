@@ -48,8 +48,11 @@ import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.AnafiLeds;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.AnafiSystemInfo;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.camera.MiniatureAntiFlicker;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.wifi.AnafiWifiAccessPoint;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.flightdata.BebopFlightDataDownloader;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.crashml.HttpReportDownloader;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.DebugDevToolbox;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SensorsState;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.flightlog.HttpFlightLogDownloader;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.FirmwareUpdaterProtocol;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.UpdaterController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.miniature.MiniatureHeadlights;
@@ -122,9 +125,9 @@ public class MiniatureFamilyDroneController extends DroneController {
                 new MiniatureRemovableUserStorage(this),
                 GroundSdkConfig.get().isDevToolboxEnabled() ? new DebugDevToolbox(this) : null,
                 UpdaterController.create(this, FirmwareUpdaterProtocol.Ftp::new),
-//                HttpReportDownloader.create(this),
-//                BebopFlightDataDownloader.create(this),
-//                HttpFlightLogDownloader.create(this),
+                HttpReportDownloader.create(this),
+                BebopFlightDataDownloader.create(this),
+                HttpFlightLogDownloader.create(this, null),
                 new AnafiWifiAccessPoint(this),
                 new MiniatureCameraController(this),
                 new MiniatureAntiFlicker(this),

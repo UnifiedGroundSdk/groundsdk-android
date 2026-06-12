@@ -42,7 +42,6 @@ import com.parrot.drone.groundsdk.internal.device.peripheral.GimbalCore;
 import com.parrot.drone.groundsdk.value.DoubleRange;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureArdrone3;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureCommon;
-import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureGimbal;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
 
 import java.util.EnumMap;
@@ -205,6 +204,7 @@ public final class BebopGimbal extends DronePeripheralController {
         mBoundsReceived = false;
         mAllReceived = false;
         mCenterReceived = false;
+        mCenterSent = false;
 
 //        DeviceController.Backend backend = mDeviceController.getProtocolBackend();
 //        if (backend != null) {
@@ -319,21 +319,12 @@ public final class BebopGimbal extends DronePeripheralController {
             maxSpeeds = mMaxSpeeds;
         }
 
-        boolean updating = false;
-        if (forceSendingCommand || !maxSpeeds.equals(mMaxSpeeds)) {
-            Double yaw = maxSpeeds.get(Axis.YAW);
-            Double pitch = maxSpeeds.get(Axis.PITCH);
-            Double roll = maxSpeeds.get(Axis.ROLL);
-            updating = sendCommand(ArsdkFeatureGimbal.encodeSetMaxSpeed(0,
-                    yaw != null ? (float) yaw.doubleValue() : 0f,
-                    pitch != null ? (float) pitch.doubleValue() : 0f,
-                    roll != null ? (float) roll.doubleValue() : 0f));
-        }
-
+        // Bebop firmware does not implement the 'gimbal' feature SetMaxSpeed command; there is no ardrone3
+        // command to set camera velocity limits either — the drone reports them read-only via VelocityRange.
+        // We update our local copy and the UI, but never send a command (updating = false always).
         mMaxSpeeds = maxSpeeds;
-
         mGimbal.updateMaxSpeeds(maxSpeeds);
-        return updating;
+        return false;
     }
 
     /**
@@ -559,30 +550,31 @@ public final class BebopGimbal extends DronePeripheralController {
 
         @Override
         public boolean setStabilization(@NonNull Axis axis, boolean stabilized) {
-//            applyStabilization(axis, stabilized);
+            // Update mStabilizedAxes first so that both the persisted value and the command
+            // encode the intended post-change state (fixes persist-before-apply lag bug).
+            if (stabilized) {
+                mStabilizedAxes.add(axis);
+            } else {
+                mStabilizedAxes.remove(axis);
+            }
             STABILIZED_AXES_PRESET.save(mPresetDict, mStabilizedAxes);
 
-            if (stabilized) {
-                for (Axis a : mStabilizedAxes) {
-                    if (!a.equals(axis)) {
-                        sendCommand(ArsdkFeatureArdrone3.PictureSettings.encodeVideoStabilizationMode(ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.ROLL_PITCH));
-                        return true;
-                    }
-                }
-                return sendCommand(ArsdkFeatureArdrone3.PictureSettings.encodeVideoStabilizationMode(axis == Axis.PITCH ?
-                        ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.PITCH :
-                        ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.ROLL));
+            // Derive the VideoStabilizationMode from the new stabilized-axes set.
+            // Bebop firmware only supports PITCH, ROLL, ROLL_PITCH and NONE; YAW is not a
+            // firmware-supported stabilization axis (fixes YAW→ROLL copy-paste encoding bug).
+            final boolean hasPitch = mStabilizedAxes.contains(Axis.PITCH);
+            final boolean hasRoll  = mStabilizedAxes.contains(Axis.ROLL);
+            final ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode mode;
+            if (hasPitch && hasRoll) {
+                mode = ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.ROLL_PITCH;
+            } else if (hasPitch) {
+                mode = ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.PITCH;
+            } else if (hasRoll) {
+                mode = ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.ROLL;
             } else {
-                for (Axis a : mStabilizedAxes) {
-                    if (!a.equals(axis)) {
-                        sendCommand(ArsdkFeatureArdrone3.PictureSettings.encodeVideoStabilizationMode(a == Axis.PITCH ?
-                                ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.PITCH :
-                                ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.ROLL));
-                        return true;
-                    }
-                }
-                return sendCommand(ArsdkFeatureArdrone3.PictureSettings.encodeVideoStabilizationMode(ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.NONE));
+                mode = ArsdkFeatureArdrone3.PicturesettingsVideostabilizationmodeMode.NONE;
             }
+            return sendCommand(ArsdkFeatureArdrone3.PictureSettings.encodeVideoStabilizationMode(mode));
         }
 
         @Override
@@ -598,7 +590,8 @@ public final class BebopGimbal extends DronePeripheralController {
 
                 if (mode == Gimbal.ControlMode.POSITION) {
                     sendCommand(ArsdkFeatureArdrone3.Camera.encodeOrientationV2(tilt, pan));
-                } else {
+                } else if (pitchRange != null && yawRange != null) {
+                    // pitchRange/yawRange are populated by VelocityRange; guard until that event arrives
                     final float velocityTilt = (float) pitchRange.scaleFrom(tilt, velocityRange);
                     final float velocityPan = (float) yawRange.scaleFrom(pan, velocityRange);
 

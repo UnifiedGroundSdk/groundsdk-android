@@ -32,9 +32,6 @@
 
 package com.parrot.drone.groundsdk.arsdkengine.pilotingitf.bebop;
 
-import android.os.Handler;
-import android.os.Looper;
-
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.PilotingItfActivationController;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.PersistentStore;
 import com.parrot.drone.groundsdk.arsdkengine.persistence.StorageEntry;
@@ -504,22 +501,29 @@ public class BebopFlightPlanPilotingItf extends ActivablePilotingItfController {
             mFlightPlanToUpload = null;
             final FtpSession session = mDeviceController.getFlightPlanFtpSession();
 
-            if (session != null) {
-                final boolean successful = session.storeFile(flightPlan, "flightPlan.mavlink", new FtpSession.FtpTransferListener() {
-                    @Override
-                    public void onTransferCompleted(boolean successful, @Nullable Object data) {
-                        onTransferComplete(successful, data);
-                    }
+            if (session == null) {
+                // No FTP session available; fail immediately rather than leaving upload stuck.
+                onTransferComplete(false, null);
+                return;
+            }
 
-                    @Override
-                    public void onTransferProgress(int percent) {
-
-                    }
-                });
-
-                if (!successful) {
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> onTransferComplete(false, null), 500);
+            final boolean fileFound = session.storeFile(flightPlan, "flightPlan.mavlink", new FtpSession.FtpTransferListener() {
+                @Override
+                public void onTransferCompleted(boolean successful, @Nullable Object data) {
+                    onTransferComplete(successful, data);
                 }
+
+                @Override
+                public void onTransferProgress(int percent) {
+
+                }
+            });
+
+            if (!fileFound) {
+                // storeFile returns false only when the local file is not found; the async
+                // transfer thread was never started so onTransferCompleted will never fire.
+                // Fail immediately to clear the UPLOADING state.
+                onTransferComplete(false, null);
             }
         } else {
             // stop current flight plan, if any, before uploading the file

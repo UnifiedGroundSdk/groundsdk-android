@@ -81,7 +81,9 @@ public class SkyControllerFamilyController extends RCController {
                 new SkyControllerDroneFinder(this),
                 model == RemoteControl.Model.SKY_CONTROLLER ? new Sc1Gamepad(this) :
                         model == RemoteControl.Model.SKY_CONTROLLER_2 ?  new Sc2Gamepad(this) :
-                                new Sc3Gamepad(this),
+                                // SKY_CONTROLLER_2P is SC2-generation (mapper feature, SC2 button/axis layout)
+                                model == RemoteControl.Model.SKY_CONTROLLER_2P ? new Sc2Gamepad(this) :
+                                        new Sc3Gamepad(this),
                 new SkyControllerSystemInfo(this),
                 new SkyControllerMagnetometer(this),
                 new SkyControllerCopilot(this),

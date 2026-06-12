@@ -56,13 +56,17 @@ import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.AnafiTargetTracke
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.anafi.wifi.AnafiWifiAccessPoint;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.BebopRemovableUserStorage;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.BebopStreamServer;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.DiscoFlightTuning;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.DiscoPitot;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.camera.BebopAntiFlicker;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.camera.BebopCameraController;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.flightdata.BebopFlightDataDownloader;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.gimbal.BebopGimbal;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop.media.BebopMediaStore;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.DebugDevToolbox;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.SensorsState;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.crashml.FtpReportDownloader;
+import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.flightlog.FtpFlightLogDownloader;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.FirmwareUpdaterProtocol;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.common.updater.UpdaterController;
 import com.parrot.drone.groundsdk.arsdkengine.pilotingitf.PilotingCommand;
@@ -128,6 +132,7 @@ public class BebopFamilyDroneController extends DroneController {
                 // peripherals
                 new AnafiMagnetometer(this),
                 new DiscoPitot(this),
+                new DiscoFlightTuning(this),
                 new AnafiSystemInfo(this),
                 new AnafiBeeper(this),
                 new AnafiMotors(this),
@@ -137,9 +142,9 @@ public class BebopFamilyDroneController extends DroneController {
                 new BebopRemovableUserStorage(this),
                 GroundSdkConfig.get().isDevToolboxEnabled() ? new DebugDevToolbox(this) : null,
                 UpdaterController.create(this, FirmwareUpdaterProtocol.Ftp::new),
-//                FtpReportDownloader.create(this),
-//                BebopFlightDataDownloader.create(this),
-//                FtpFlightLogDownloader.create(this),
+                FtpReportDownloader.create(this),
+                BebopFlightDataDownloader.create(this),
+                FtpFlightLogDownloader.create(this),
                 new AnafiWifiAccessPoint(this),
                 new BebopCameraController(this),
                 new BebopAntiFlicker(this),

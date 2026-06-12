@@ -34,6 +34,7 @@ package com.parrot.drone.groundsdk.arsdkengine.peripheral.bebop;
 
 import com.parrot.drone.groundsdk.arsdkengine.devicecontroller.DroneController;
 import com.parrot.drone.groundsdk.arsdkengine.peripheral.DronePeripheralController;
+import com.parrot.drone.groundsdk.device.Drone;
 import com.parrot.drone.groundsdk.internal.device.peripheral.PitotCore;
 import com.parrot.drone.sdkcore.arsdk.ArsdkFeatureCommon;
 import com.parrot.drone.sdkcore.arsdk.command.ArsdkCommand;
@@ -60,7 +61,10 @@ public final class DiscoPitot extends DronePeripheralController {
 
     @Override
     public void onConnected() {
-        mPitot.publish();
+        // Pitot is a Disco-only peripheral; quad Bebops have no airspeed sensor.
+        if (mDeviceController.getDevice().getModel() == Drone.Model.DISCO) {
+            mPitot.publish();
+        }
     }
 
     @Override
